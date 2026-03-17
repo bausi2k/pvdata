@@ -9,19 +9,22 @@ const HIVE_MQ_PORT = 8884;
 const HIVE_MQ_USER = 'sbwwetter';
 const HIVE_MQ_PASS = 'pbd7chu6kba!zrd2GTG';
 
+// Zustandsvariablen für Berechnungen
+let currentDC = 0;
+let currentAC = 0;
+let currentNet = 0; // NEU: Speichert die Netzleistung
 let pvChart;
 
 // Zuordnung der Topics zu UI-Elementen
 const topics = {
     'home/haus/zentral/pv/wrstatus': { id: 'wr-status', type: 'text' },
-    'home/haus/zentral/pv/dcleistung': { id: 'pv-dc', unit: ' kW' }, // Live-Wert Kachel
-    'home/haus/zentral/pv/leistung': { id: 'pv-ac', unit: ' kW' },   // Live-Wert Kachel
-    'home/haus/zentral/Momentanleistung': { id: 'net-power', unit: ' kW' }, // Live-Wert Kachel
+    'home/haus/zentral/pv/dcleistung': { id: 'pv-dc', unit: ' kW' }, 
+    'home/haus/zentral/pv/leistung': { id: 'pv-ac', unit: ' kW' },   
+    'home/haus/zentral/Momentanleistung': { id: 'net-power', unit: ' kW' }, 
     'home/haus/zentral/pv/tagesenergy': { id: 'pv-day-energy', unit: ' kWh' },
     'home/haus/zentral/pv/pv_anlage_totalweek_energy': { id: 'pv-week', unit: ' kWh' },
     'home/haus/zentral/pv/pv_anlage_totalmonth_energy': { id: 'pv-month', unit: ' kWh' },
     'home/haus/zentral/pv/pv_anlage_totalyear_energy': { id: 'pv-year', unit: ' kWh' },
-    // NEU: Separates Topic für die Node-RED Historie
     'home/haus/zentral/pv/historie': { type: 'history' } 
 };
 
@@ -34,12 +37,14 @@ function initChart() {
     pvChart = new Chart(ctx, {
         type: 'line',
         data: {
-            labels: [], // Wird durch das Node-RED JSON gefüllt
+            labels: [], 
             datasets: [
                 { label: 'DC-Leistung (kW)', data: [], borderColor: '#fbc02d', backgroundColor: '#fbc02d33', fill: false, tension: 0.3 },
                 { label: 'AC-Leistung (kW)', data: [], borderColor: '#1976d2', backgroundColor: '#1976d233', fill: false, tension: 0.3 },
                 { label: 'Netzleistung (kW)', data: [], borderColor: '#d32f2f', backgroundColor: '#d32f2f33', fill: false, tension: 0.3 },
-                { label: 'Akkuleistung (kW)', data: [], borderColor: '#7b1fa2', backgroundColor: '#7b1fa233', fill: true, tension: 0.3, borderDash: [5, 5] }
+                { label: 'Akkuleistung (kW)', data: [], borderColor: '#7b1fa2', backgroundColor: '#7b1fa233', fill: true, tension: 0.3, borderDash: [5, 5] },
+                // NEU: Fünfte Linie für die Gesamtleistung (Grün)
+                { label: 'Gesamtleistung (kW)', data: [], borderColor: '#388e3c', backgroundColor: '#388e3c33', fill: false, tension: 0.3 } 
             ]
         },
         options: {
@@ -47,7 +52,7 @@ function initChart() {
             maintainAspectRatio: false,
             scales: {
                 y: { title: { display: true, text: 'Leistung (kW)' } },
-                x: { ticks: { maxTicksLimit: 12 } } // Verhindert zu viele Uhrzeiten auf der X-Achse
+                x: { ticks: { maxTicksLimit: 12 } } 
             },
             plugins: {
                 legend: { position: 'top' }
@@ -71,7 +76,6 @@ const mqttStatusElement = document.getElementById('mqtt-status');
 client.on('connect', () => {
     mqttStatusElement.textContent = 'Verbunden ✅';
     mqttStatusElement.style.color = 'green';
-    // Alle konfigurierten Topics abonnieren
     client.subscribe(Object.keys(topics));
 });
 
@@ -90,6 +94,7 @@ client.on('message', (topic, payload) => {
             const acData = [];
             const netData = [];
             const battData = [];
+            const totalData = []; // NEU: Array für den Graphen
 
             // JSON durchlaufen und Arrays für den Chart füllen
             historyData.forEach(point => {
@@ -97,8 +102,10 @@ client.on('message', (topic, payload) => {
                 dcData.push(point.dc);
                 acData.push(point.ac);
                 netData.push(point.net);
-                // Akkuleistung direkt hier berechnen: DC - AC
+                // Akkuleistung: DC - AC
                 battData.push((point.dc - point.ac).toFixed(2));
+                // NEU: Gesamtleistung (AC + Netz)
+                totalData.push((point.ac + point.net).toFixed(2));
             });
 
             // Chart mit den neuen Arrays aktualisieren
@@ -108,12 +115,13 @@ client.on('message', (topic, payload) => {
                 pvChart.data.datasets[1].data = acData;
                 pvChart.data.datasets[2].data = netData;
                 pvChart.data.datasets[3].data = battData;
+                pvChart.data.datasets[4].data = totalData; // NEU: Dem Chart übergeben
                 pvChart.update();
             }
         } catch (e) {
             console.error('Fehler beim Parsen der PV-Historie:', e);
         }
-        return; // Nach der Verarbeitung der Historie hier abbrechen
+        return; 
     }
 
     // ----- STANDARD: Live-Werte für die Kacheln -----
@@ -124,7 +132,6 @@ client.on('message', (topic, payload) => {
 
     if (config.type === 'text') {
         element.textContent = message;
-        // Optische Rückmeldung für Wechselrichter-Status
         if (message.toLowerCase().includes('netz') || message.toLowerCase().includes('ok')) {
             element.className = 'status-badge status-online';
         } else {
@@ -132,6 +139,21 @@ client.on('message', (topic, payload) => {
         }
     } else {
         element.innerHTML = `${value}<span class="unit">${config.unit}</span>`;
+    }
+
+    // --- NEU: Live-Berechnung für die Gesamtleistung Kachel ---
+    // Werte zwischenspeichern, wenn sie reinkommen
+    if (topic === 'home/haus/zentral/pv/dcleistung') currentDC = parseFloat(value);
+    if (topic === 'home/haus/zentral/pv/leistung') currentAC = parseFloat(value);
+    if (topic === 'home/haus/zentral/Momentanleistung') currentNet = parseFloat(value);
+
+    // Wenn AC-Leistung oder Netzleistung aktualisiert wurde, summieren wir neu
+    if (topic === 'home/haus/zentral/pv/leistung' || topic === 'home/haus/zentral/Momentanleistung') {
+        const total = (currentAC + currentNet).toFixed(2);
+        const totalElement = document.getElementById('pv-total');
+        if (totalElement) {
+            totalElement.innerHTML = `${total}<span class="unit"> kW</span>`;
+        }
     }
 });
 

@@ -16,9 +16,13 @@
 
         <header>
             <h1>PV-Anlage Sonnenblumenweg</h1>
-            <div class="wr-status-container">
-                Leistung Module: 11kW Ost/West / Leistung Wechselrichter: 8,8kW / Batteriekapazität: 5kWh
+            
+            <div class="wr-status-container" style="margin-bottom: 1rem;">
+                Leistung Module: <strong>11kW Ost/West</strong> | 
+                Leistung Wechselrichter: <strong>8,8kW</strong> | 
+                Batteriekapazität: <strong>5kWh</strong>
             </div>
+            
             <div class="wr-status-container">
                 Wechselrichter Status: <mark id="wr-status" class="status-badge">Verbinde...</mark>
                 <br>
@@ -38,6 +42,10 @@
             <article>
                 <header><strong>Netzleistung</strong></header>
                 <span id="net-power" class="data-value">--<span class="unit">kW</span></span>
+            </article>
+            <article>
+                <header><strong>Gesamtleistung</strong></header>
+                <span id="pv-total" class="data-value">--<span class="unit">kW</span></span>
             </article>
             <article>
                 <header><strong>Tagesproduktion</strong></header>
@@ -71,7 +79,7 @@
             <small>
                 made with ❤️ and Google Gemini @ Gruber 🏡 
                 &nbsp;|&nbsp; 
-                <a href="impressum.html" class="secondary">Impressum </a>
+                <a href="impressum.html" class="secondary">Impressum</a>
                 &nbsp;|&nbsp; 
                 <a href="cookies.html" class="secondary">Cookie-Richtlinie</a>
             </small>
