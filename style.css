@@ -1,0 +1,94 @@
+/* style.css - PV Dashboard Sonnenblumenweg */
+
+:root {
+    --pico-font-size: 14px;
+}
+
+header {
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+/* Status Badges */
+.status-badge {
+    padding: 0.2rem 0.6rem;
+    border-radius: 12px;
+    font-size: 0.9rem;
+    font-weight: bold;
+    transition: background-color 0.3s ease;
+}
+
+.status-online { 
+    background: #e6fffa; 
+    color: #00897b; 
+    border: 1px solid #00897b; 
+}
+
+.status-offline { 
+    background: #fff5f5; 
+    color: #e53e3e; 
+    border: 1px solid #e53e3e; 
+}
+
+/* Daten-Anzeige */
+.data-value {
+    font-size: 2rem;
+    font-weight: bold;
+    color: var(--pico-primary);
+    display: block;
+    text-align: center;
+    margin-top: 0.5rem;
+}
+
+.unit {
+    font-size: 0.5em;
+    margin-left: 4px;
+    color: var(--pico-muted-color);
+}
+
+/* Chart Container */
+#chart-wrapper {
+    position: relative;
+    height: 400px;
+    width: 100%;
+}
+
+/* Layout Grids */
+.grid-4 {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+article {
+    padding: 1rem;
+    margin-bottom: 0;
+}
+
+article header {
+    margin-bottom: 0.5rem;
+    font-size: 1rem;
+    border-bottom: 1px solid var(--pico-muted-border-color);
+    padding-bottom: 0.5rem;
+    text-align: center;
+}
+
+.wr-status-container {
+    margin-top: 0.5rem;
+    font-style: italic;
+}
+
+/* Footer Styling */
+footer {
+    text-align: center;
+    margin-top: 3rem;
+    padding: 2rem;
+    border-top: 1px solid var(--pico-muted-border-color);
+    opacity: 0.8;
+}
+
+footer a.secondary {
+    color: inherit;
+    text-decoration: underline;
+}

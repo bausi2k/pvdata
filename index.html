@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="de" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PV-Dashboard - Sonnenblumenweg</title>
+    
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css"/>
+    <link rel="stylesheet" href="style.css">
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+
+    <main class="container">
+
+        <header>
+            <h1>PV-Anlage Sonnenblumenweg</h1>
+            <div class="wr-status-container">
+                Wechselrichter Status: <mark id="wr-status" class="status-badge">Verbinde...</mark>
+                <br>
+                <small>MQTT: <span id="mqtt-status">...</span></small>
+            </div>
+        </header>
+
+        <div class="grid-4">
+            <article>
+                <header><strong>DC-Leistung</strong></header>
+                <span id="pv-dc" class="data-value">--<span class="unit">kW</span></span>
+            </article>
+            <article>
+                <header><strong>AC-Leistung</strong></header>
+                <span id="pv-ac" class="data-value">--<span class="unit">kW</span></span>
+            </article>
+            <article>
+                <header><strong>Netzleistung</strong></header>
+                <span id="net-power" class="data-value">--<span class="unit">kW</span></span>
+            </article>
+            <article>
+                <header><strong>Tagesproduktion</strong></header>
+                <span id="pv-day-energy" class="data-value">--<span class="unit">kWh</span></span>
+            </article>
+        </div>
+
+        <article>
+            <header><strong>Leistungsverlauf (Live)</strong></header>
+            <div id="chart-wrapper">
+                <canvas id="pvChart"></canvas>
+            </div>
+        </article>
+
+        <div class="grid-4" style="margin-top: 1.5rem;">
+            <article>
+                <header><strong>Wochenenergie</strong></header>
+                <span id="pv-week" class="data-value">--<span class="unit">kWh</span></span>
+            </article>
+            <article>
+                <header><strong>Monatsenergie</strong></header>
+                <span id="pv-month" class="data-value">--<span class="unit">kWh</span></span>
+            </article>
+            <article>
+                <header><strong>Jahresenergie</strong></header>
+                <span id="pv-year" class="data-value">--<span class="unit">kWh</span></span>
+            </article>
+        </div>
+
+        <footer>
+            <small>
+                made with ❤️ and Google Gemini @ Gruber 🏡 
+                &nbsp;|&nbsp; 
+                <a href="impressum.html" class="secondary">Impressum</a>
+                &nbsp;|&nbsp; 
+                <a href="cookies.html" class="secondary">Cookie-Richtlinie</a>
+            </small>
+        </footer>
+
+    </main>
+
+    <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+    <script src="app.js"></script>
+
+</body>
+</html>
