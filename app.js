@@ -20,7 +20,8 @@ const topics = {
     'home/haus/zentral/pv/wrstatus': { id: 'wr-status', type: 'text' },
     'home/haus/zentral/pv/dcleistung': { id: 'pv-dc', unit: ' kW' }, 
     'home/haus/zentral/pv/leistung': { id: 'pv-ac', unit: ' kW' },   
-    'home/haus/zentral/Momentanleistung': { id: 'net-power', unit: ' kW' }, 
+    // WICHTIG: Das Topic wurde angepasst auf pv/Momentanleistung
+    'home/haus/zentral/pv/Momentanleistung': { id: 'net-power', unit: ' kW' }, 
     'home/haus/zentral/pv/tagesenergy': { id: 'pv-day-energy', unit: ' kWh' },
     'home/haus/zentral/pv/pv_anlage_totalweek_energy': { id: 'pv-week', unit: ' kWh' },
     'home/haus/zentral/pv/pv_anlage_totalmonth_energy': { id: 'pv-month', unit: ' kWh' },
@@ -95,7 +96,7 @@ client.on('message', (topic, payload) => {
             const acData = [];
             const netData = [];
             const battData = [];
-            const totalData = []; // NEU: Array für den Graphen
+            const totalData = []; 
 
             // JSON durchlaufen und Arrays für den Chart füllen
             historyData.forEach(point => {
@@ -105,8 +106,8 @@ client.on('message', (topic, payload) => {
                 netData.push(point.net);
                 
                 // Akkuleistung und Gesamtleistung kommen nun fix und fertig aus Node-RED
-                battData.push(Number(point.batt) || 0);
-                totalData.push(Number(point.total) || 0);
+                battData.push(point.batt !== undefined ? Number(point.batt) : 0);
+                totalData.push(point.total !== undefined ? Number(point.total) : 0);
             });
 
             // Chart mit den neuen Arrays aktualisieren
@@ -143,11 +144,13 @@ client.on('message', (topic, payload) => {
     }
 
     // --- Live-Berechnung für die Gesamtleistung Kachel ---
-    if (topic === 'home/haus/zentral/pv/dcleistung') currentDC = Number(value) || 0;
-    if (topic === 'home/haus/zentral/pv/leistung') currentAC = Number(value) || 0;
-    if (topic === 'home/haus/zentral/Momentanleistung') currentNet = Number(value) || 0;
+    if (topic === 'home/haus/zentral/pv/dcleistung') currentDC = isNaN(Number(value)) ? 0 : Number(value);
+    if (topic === 'home/haus/zentral/pv/leistung') currentAC = isNaN(Number(value)) ? 0 : Number(value);
+    // WICHTIG: Das Topic wurde angepasst
+    if (topic === 'home/haus/zentral/pv/Momentanleistung') currentNet = isNaN(Number(value)) ? 0 : Number(value);
 
-    if (topic === 'home/haus/zentral/pv/leistung' || topic === 'home/haus/zentral/Momentanleistung') {
+    // WICHTIG: Das Topic wurde angepasst
+    if (topic === 'home/haus/zentral/pv/leistung' || topic === 'home/haus/zentral/pv/Momentanleistung') {
         const total = (currentAC + currentNet).toFixed(2);
         const totalElement = document.getElementById('pv-total');
         if (totalElement) {
