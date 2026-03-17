@@ -26,6 +26,8 @@ const topics = {
     'home/haus/zentral/pv/pv_anlage_totalweek_energy': { id: 'pv-week', unit: ' kWh' },
     'home/haus/zentral/pv/pv_anlage_totalmonth_energy': { id: 'pv-month', unit: ' kWh' },
     'home/haus/zentral/pv/pv_anlage_totalyear_energy': { id: 'pv-year', unit: ' kWh' },
+    // NEU: Gesamtenergie Kachel
+    'home/haus/zentral/pv/gesamtenergie': { id: 'pv-total-energy', unit: ' kWh' },
     // Separates Topic für die Node-RED Historie
     'home/haus/zentral/pv/historie': { type: 'history' } 
 };
