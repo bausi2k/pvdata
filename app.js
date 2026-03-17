@@ -44,7 +44,7 @@ function initChart() {
                 { label: 'AC-Leistung (kW)', data: [], borderColor: '#1976d2', backgroundColor: '#1976d233', fill: false, tension: 0.3 },
                 { label: 'Netzleistung (kW)', data: [], borderColor: '#d32f2f', backgroundColor: '#d32f2f33', fill: false, tension: 0.3 },
                 { label: 'Akkuleistung (kW)', data: [], borderColor: '#7b1fa2', backgroundColor: '#7b1fa233', fill: true, tension: 0.3, borderDash: [5, 5] },
-                // NEU: Fünfte Linie für die Gesamtleistung (Grün)
+                // Fünfte Linie für die Gesamtleistung (Grün)
                 { label: 'Gesamtleistung (kW)', data: [], borderColor: '#388e3c', backgroundColor: '#388e3c33', fill: false, tension: 0.3 } 
             ]
         },
@@ -104,11 +104,9 @@ client.on('message', (topic, payload) => {
                 acData.push(point.ac);
                 netData.push(point.net);
                 
-                // Akkuleistung: DC - AC
-                battData.push((point.dc - point.ac).toFixed(2));
-                
-                // NEU: Gesamtleistung (AC + Netz) berechnen
-                totalData.push((point.ac + point.net).toFixed(2));
+                // Akkuleistung und Gesamtleistung kommen nun fix und fertig aus Node-RED
+                battData.push(Number(point.batt) || 0);
+                totalData.push(Number(point.total) || 0);
             });
 
             // Chart mit den neuen Arrays aktualisieren
@@ -118,7 +116,7 @@ client.on('message', (topic, payload) => {
                 pvChart.data.datasets[1].data = acData;
                 pvChart.data.datasets[2].data = netData;
                 pvChart.data.datasets[3].data = battData;
-                pvChart.data.datasets[4].data = totalData; // Die neue 5. Linie an den Chart übergeben
+                pvChart.data.datasets[4].data = totalData; 
                 pvChart.update();
             }
         } catch (e) {
@@ -144,13 +142,11 @@ client.on('message', (topic, payload) => {
         element.innerHTML = `${value}<span class="unit">${config.unit}</span>`;
     }
 
-    // --- Live-Berechnung für die Gesamtleistung Kachel (oben im HTML) ---
-    // Werte zwischenspeichern, wenn sie reinkommen
-    if (topic === 'home/haus/zentral/pv/dcleistung') currentDC = parseFloat(value);
-    if (topic === 'home/haus/zentral/pv/leistung') currentAC = parseFloat(value);
-    if (topic === 'home/haus/zentral/Momentanleistung') currentNet = parseFloat(value);
+    // --- Live-Berechnung für die Gesamtleistung Kachel ---
+    if (topic === 'home/haus/zentral/pv/dcleistung') currentDC = Number(value) || 0;
+    if (topic === 'home/haus/zentral/pv/leistung') currentAC = Number(value) || 0;
+    if (topic === 'home/haus/zentral/Momentanleistung') currentNet = Number(value) || 0;
 
-    // Wenn AC-Leistung oder Netzleistung aktualisiert wurde, summieren wir neu
     if (topic === 'home/haus/zentral/pv/leistung' || topic === 'home/haus/zentral/Momentanleistung') {
         const total = (currentAC + currentNet).toFixed(2);
         const totalElement = document.getElementById('pv-total');
