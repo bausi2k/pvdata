@@ -12,7 +12,7 @@ const HIVE_MQ_PASS = 'pbd7chu6kba!zrd2GTG';
 // Zustandsvariablen für Berechnungen
 let currentDC = 0;
 let currentAC = 0;
-let currentNet = 0; // NEU: Speichert die Netzleistung
+let currentNet = 0; // Speichert die aktuelle Netzleistung
 let pvChart;
 
 // Zuordnung der Topics zu UI-Elementen
@@ -25,6 +25,7 @@ const topics = {
     'home/haus/zentral/pv/pv_anlage_totalweek_energy': { id: 'pv-week', unit: ' kWh' },
     'home/haus/zentral/pv/pv_anlage_totalmonth_energy': { id: 'pv-month', unit: ' kWh' },
     'home/haus/zentral/pv/pv_anlage_totalyear_energy': { id: 'pv-year', unit: ' kWh' },
+    // Separates Topic für die Node-RED Historie
     'home/haus/zentral/pv/historie': { type: 'history' } 
 };
 
@@ -102,9 +103,11 @@ client.on('message', (topic, payload) => {
                 dcData.push(point.dc);
                 acData.push(point.ac);
                 netData.push(point.net);
+                
                 // Akkuleistung: DC - AC
                 battData.push((point.dc - point.ac).toFixed(2));
-                // NEU: Gesamtleistung (AC + Netz)
+                
+                // NEU: Gesamtleistung (AC + Netz) berechnen
                 totalData.push((point.ac + point.net).toFixed(2));
             });
 
@@ -115,7 +118,7 @@ client.on('message', (topic, payload) => {
                 pvChart.data.datasets[1].data = acData;
                 pvChart.data.datasets[2].data = netData;
                 pvChart.data.datasets[3].data = battData;
-                pvChart.data.datasets[4].data = totalData; // NEU: Dem Chart übergeben
+                pvChart.data.datasets[4].data = totalData; // Die neue 5. Linie an den Chart übergeben
                 pvChart.update();
             }
         } catch (e) {
@@ -141,7 +144,7 @@ client.on('message', (topic, payload) => {
         element.innerHTML = `${value}<span class="unit">${config.unit}</span>`;
     }
 
-    // --- NEU: Live-Berechnung für die Gesamtleistung Kachel ---
+    // --- Live-Berechnung für die Gesamtleistung Kachel (oben im HTML) ---
     // Werte zwischenspeichern, wenn sie reinkommen
     if (topic === 'home/haus/zentral/pv/dcleistung') currentDC = parseFloat(value);
     if (topic === 'home/haus/zentral/pv/leistung') currentAC = parseFloat(value);
