@@ -9,10 +9,10 @@ const HIVE_MQ_PORT = 8884;
 const HIVE_MQ_USER = 'sbwwetter';
 const HIVE_MQ_PASS = 'pbd7chu6kba!zrd2GTG';
 
-// Zustandsvariablen für Berechnungen
+// Zustandsvariablen für Berechnungen der Live-Kachel
 let currentDC = 0;
 let currentAC = 0;
-let currentNet = 0; // Speichert die aktuelle Netzleistung
+let currentNet = 0; 
 let pvChart;
 
 // Zuordnung der Topics zu UI-Elementen
@@ -20,13 +20,11 @@ const topics = {
     'home/haus/zentral/pv/wrstatus': { id: 'wr-status', type: 'text' },
     'home/haus/zentral/pv/dcleistung': { id: 'pv-dc', unit: ' kW' }, 
     'home/haus/zentral/pv/leistung': { id: 'pv-ac', unit: ' kW' },   
-    // WICHTIG: Das Topic wurde angepasst auf pv/Momentanleistung
     'home/haus/zentral/pv/Momentanleistung': { id: 'net-power', unit: ' kW' }, 
     'home/haus/zentral/pv/tagesenergy': { id: 'pv-day-energy', unit: ' kWh' },
     'home/haus/zentral/pv/pv_anlage_totalweek_energy': { id: 'pv-week', unit: ' kWh' },
     'home/haus/zentral/pv/pv_anlage_totalmonth_energy': { id: 'pv-month', unit: ' kWh' },
     'home/haus/zentral/pv/pv_anlage_totalyear_energy': { id: 'pv-year', unit: ' kWh' },
-    // NEU: Gesamtenergie Kachel
     'home/haus/zentral/pv/gesamtenergie': { id: 'pv-total-energy', unit: ' kWh' },
     // Separates Topic für die Node-RED Historie
     'home/haus/zentral/pv/historie': { type: 'history' } 
@@ -107,10 +105,20 @@ client.on('message', (topic, payload) => {
                 acData.push(point.ac);
                 netData.push(point.net);
                 
-                // Akkuleistung und Gesamtleistung kommen nun fix und fertig aus Node-RED
+                // Akkuleistung und Gesamtleistung (Sicherheits-Check auf undefined)
                 battData.push(point.batt !== undefined ? Number(point.batt) : 0);
                 totalData.push(point.total !== undefined ? Number(point.total) : 0);
             });
+
+            // ==========================================
+            // DEBUGGING: Ausgabe in die Browser-Konsole!
+            // ==========================================
+            console.log("--- DEBUGGING PV-CHART ---");
+            console.log("Letzter Zeitpunkt:", labels[labels.length - 1]);
+            console.log("Letzter Netz-Wert (netData):", netData[netData.length - 1]);
+            console.log("Letzter Gesamt-Wert (Grüne Linie):", totalData[totalData.length - 1]);
+            console.log("Komplettes Array von Node-RED:", historyData[historyData.length - 1]);
+            console.log("--------------------------");
 
             // Chart mit den neuen Arrays aktualisieren
             if (pvChart) {
@@ -148,10 +156,9 @@ client.on('message', (topic, payload) => {
     // --- Live-Berechnung für die Gesamtleistung Kachel ---
     if (topic === 'home/haus/zentral/pv/dcleistung') currentDC = isNaN(Number(value)) ? 0 : Number(value);
     if (topic === 'home/haus/zentral/pv/leistung') currentAC = isNaN(Number(value)) ? 0 : Number(value);
-    // WICHTIG: Das Topic wurde angepasst
     if (topic === 'home/haus/zentral/pv/Momentanleistung') currentNet = isNaN(Number(value)) ? 0 : Number(value);
 
-    // WICHTIG: Das Topic wurde angepasst
+    // Aktualisiert die Kachel, sobald AC oder Netz sich ändern
     if (topic === 'home/haus/zentral/pv/leistung' || topic === 'home/haus/zentral/pv/Momentanleistung') {
         const total = (currentAC + currentNet).toFixed(2);
         const totalElement = document.getElementById('pv-total');
