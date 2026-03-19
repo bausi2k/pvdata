@@ -51,19 +51,25 @@ const inverterStatuses = {
     "40960": "Standby: no irradiation"
 };
 
-// Zuordnung der Topics zu UI-Elementen (NEU: mit definierbaren Nachkommastellen!)
+// Zuordnung der Topics zu UI-Elementen
 const topics = {
     'home/haus/zentral/pv/wrstatus': { id: 'wr-status', type: 'text' },
     'home/haus/zentral/pv/dcleistung': { id: 'pv-dc', unit: ' kW', decimals: 2 }, 
     'home/haus/zentral/pv/leistung': { id: 'pv-ac', unit: ' kW', decimals: 2 },   
-    'home/haus/zentral/pv/Momentanleistung': { id: 'net-power', unit: ' kW', decimals: 2 }, 
+    
+    // ANGEPASST: Netzleistung auf 3 Nachkommastellen
+    'home/haus/zentral/pv/Momentanleistung': { id: 'net-power', unit: ' kW', decimals: 3 }, 
+    
     'home/haus/zentral/pv/tagesenergy': { id: 'pv-day-energy', unit: ' kWh', decimals: 2 },
     'home/haus/zentral/pv/pv_anlage_totalweek_energy': { id: 'pv-week', unit: ' kWh', decimals: 2 },
     'home/haus/zentral/pv/pv_anlage_totalmonth_energy': { id: 'pv-month', unit: ' kWh', decimals: 2 },
     'home/haus/zentral/pv/pv_anlage_totalyear_energy': { id: 'pv-year', unit: ' kWh', decimals: 2 },
     'home/haus/zentral/pv/gesamtenergie': { id: 'pv-total-energy', unit: ' kWh', decimals: 2 },
-    // Akku explizit auf 0 Nachkommastellen gesetzt
     'home/haus/zentral/pv/luna/soc': { id: 'pv-battery-soc', unit: ' %', decimals: 0 },
+    
+    // NEU: Akkuleistung (Laden/Entladen) auf 3 Nachkommastellen
+    'home/haus/zentral/pv/luna/power': { id: 'pv-battery-power', unit: ' kW', decimals: 3 },
+    
     'home/haus/zentral/pv/historie': { type: 'history' } 
 };
 
@@ -94,7 +100,7 @@ function initChart() {
             ]
         },
         options: {
-            locale: 'de-DE', // Erzwingt deutsche Formatierung (Komma) in Chart.js
+            locale: 'de-DE', 
             responsive: true,
             maintainAspectRatio: false,
             scales: {
@@ -185,7 +191,7 @@ client.on('message', (topic, payload) => {
     const element = document.getElementById(config.id);
     if (!element) return;
 
-    // --- LOGIK: Wechselrichter-Status auswerten ---
+    // --- LOGIK: Wechselrichter-Status ---
     if (config.type === 'text') {
         let statusText = inverterStatuses[message] ? inverterStatuses[message] : message;
         element.textContent = statusText;
@@ -208,14 +214,33 @@ client.on('message', (topic, payload) => {
         return; 
     }
 
-    // --- Werteverarbeitung für Zahlen (mit Localisation) ---
+    // --- Werteverarbeitung für Zahlen ---
     const numericValue = parseFloat(message);
     if (!isNaN(numericValue)) {
-        // Formatiert die Zahl auf Deutsch und mit der gewünschten Anzahl an Kommastellen
-        const displayValue = formatNumber(numericValue, config.decimals);
-        element.innerHTML = `${displayValue}<span class="unit">${config.unit}</span>`;
+        let displayValue = formatNumber(numericValue, config.decimals);
+        let extraText = "";
+
+        // Text-Logik für Netzleistung
+        if (topic === 'home/haus/zentral/pv/Momentanleistung') {
+            if (numericValue < 0) {
+                extraText = " (einspeisen)";
+                displayValue = formatNumber(Math.abs(numericValue), config.decimals); // Minuszeichen für Anzeige entfernen
+            } else if (numericValue > 0) {
+                extraText = " (beziehen)";
+            }
+        } 
+        // Text-Logik für Akku Leistung
+        else if (topic === 'home/haus/zentral/pv/luna/power') {
+            if (numericValue < 0) {
+                extraText = " (laden)";
+                displayValue = formatNumber(Math.abs(numericValue), config.decimals); // Minuszeichen für Anzeige entfernen
+            } else if (numericValue > 0) {
+                extraText = " (entladen)";
+            }
+        }
+
+        element.innerHTML = `${displayValue}<span class="unit">${config.unit}${extraText}</span>`;
     } else {
-        // Fallback, falls mal versehentlich ein Text gesendet wird
         element.innerHTML = `${message}<span class="unit">${config.unit}</span>`;
     }
 
@@ -225,7 +250,8 @@ client.on('message', (topic, payload) => {
     if (topic === 'home/haus/zentral/pv/Momentanleistung') currentNet = isNaN(numericValue) ? 0 : numericValue;
 
     if (topic === 'home/haus/zentral/pv/leistung' || topic === 'home/haus/zentral/pv/Momentanleistung') {
-        const total = currentAC + currentNet;
+        // Hier wird mit dem echten Wert inkl. Minuszeichen gerechnet!
+        const total = currentAC + currentNet; 
         const displayTotal = formatNumber(total, 2);
         
         const totalElement = document.getElementById('pv-total');
