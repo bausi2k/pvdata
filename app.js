@@ -1,6 +1,6 @@
 /**
  * app.js - PV Dashboard Sonnenblumenweg
- * Steuerung der MQTT-Kommunikation und Visualisierung (mit Historien-Topic)
+ * Steuerung der MQTT-Kommunikation und Visualisierung
  */
 
 // --- 1. Konfiguration ---
@@ -15,6 +15,42 @@ let currentAC = 0;
 let currentNet = 0; 
 let pvChart;
 
+// --- NEU: Wörterbuch für die Wechselrichter-Statuscodes ---
+const inverterStatuses = {
+    "0": "Standby: initializing",
+    "1": "Standby: detecting insulation resistance",
+    "2": "Standby: detecting irradiation",
+    "3": "Standby: grid detecting",
+    "256": "Starting",
+    "512": "On-grid",
+    "513": "Grid connection: power limited",
+    "514": "Grid connection: self-derating",
+    "515": "Off-grid Running",
+    "768": "Shutdown: fault",
+    "769": "Shutdown: command",
+    "770": "Shutdown: OVGR",
+    "771": "Shutdown: communication disconnected",
+    "772": "Shutdown: power limited",
+    "773": "Shutdown: manual startup required",
+    "774": "Shutdown: DC switches disconnected",
+    "775": "Shutdown: rapid cutoff",
+    "776": "Shutdown: input underpower",
+    "780": "Shutdown: Battery End of Discharge",
+    "1025": "Grid scheduling: cosΦ-P curve",
+    "1026": "Grid scheduling: Q-U curve",
+    "1027": "Grid scheduling: PF- U curve",
+    "1028": "Grid scheduling: dry contact",
+    "1029": "Grid scheduling: Q-P curve",
+    "1280": "Spot-check ready",
+    "1281": "Spot-checking",
+    "1536": "Inspecting",
+    "1792": "AFCI self check",
+    "2048": "I-V scanning",
+    "2304": "DC input detection",
+    "2560": "Running: off-grid charging",
+    "40960": "Standby: no irradiation"
+};
+
 // Zuordnung der Topics zu UI-Elementen
 const topics = {
     'home/haus/zentral/pv/wrstatus': { id: 'wr-status', type: 'text' },
@@ -26,7 +62,7 @@ const topics = {
     'home/haus/zentral/pv/pv_anlage_totalmonth_energy': { id: 'pv-month', unit: ' kWh' },
     'home/haus/zentral/pv/pv_anlage_totalyear_energy': { id: 'pv-year', unit: ' kWh' },
     'home/haus/zentral/pv/gesamtenergie': { id: 'pv-total-energy', unit: ' kWh' },
-    // Separates Topic für die Node-RED Historie
+    'home/haus/zentral/pv/luna/soc': { id: 'pv-battery-soc', unit: '%' },
     'home/haus/zentral/pv/historie': { type: 'history' } 
 };
 
@@ -45,7 +81,6 @@ function initChart() {
                 { label: 'AC-Leistung (kW)', data: [], borderColor: '#1976d2', backgroundColor: '#1976d233', fill: false, tension: 0.3 },
                 { label: 'Netzleistung (kW)', data: [], borderColor: '#d32f2f', backgroundColor: '#d32f2f33', fill: false, tension: 0.3 },
                 { label: 'Akkuleistung (kW)', data: [], borderColor: '#7b1fa2', backgroundColor: '#7b1fa233', fill: true, tension: 0.3, borderDash: [5, 5] },
-                // Fünfte Linie für die Gesamtleistung (Grün)
                 { label: 'Gesamtleistung (kW)', data: [], borderColor: '#388e3c', backgroundColor: '#388e3c33', fill: false, tension: 0.3 } 
             ]
         },
@@ -82,7 +117,7 @@ client.on('connect', () => {
 });
 
 client.on('message', (topic, payload) => {
-    const message = payload.toString();
+    const message = payload.toString().trim();
     const config = topics[topic];
     if (!config) return;
 
@@ -98,29 +133,15 @@ client.on('message', (topic, payload) => {
             const battData = [];
             const totalData = []; 
 
-            // JSON durchlaufen und Arrays für den Chart füllen
             historyData.forEach(point => {
                 labels.push(point.time);
                 dcData.push(point.dc);
                 acData.push(point.ac);
                 netData.push(point.net);
-                
-                // Akkuleistung und Gesamtleistung (Sicherheits-Check auf undefined)
                 battData.push(point.batt !== undefined ? Number(point.batt) : 0);
                 totalData.push(point.total !== undefined ? Number(point.total) : 0);
             });
 
-            // ==========================================
-            // DEBUGGING: Ausgabe in die Browser-Konsole!
-            // ==========================================
-            console.log("--- DEBUGGING PV-CHART ---");
-            console.log("Letzter Zeitpunkt:", labels[labels.length - 1]);
-            console.log("Letzter Netz-Wert (netData):", netData[netData.length - 1]);
-            console.log("Letzter Gesamt-Wert (Grüne Linie):", totalData[totalData.length - 1]);
-            console.log("Komplettes Array von Node-RED:", historyData[historyData.length - 1]);
-            console.log("--------------------------");
-
-            // Chart mit den neuen Arrays aktualisieren
             if (pvChart) {
                 pvChart.data.labels = labels;
                 pvChart.data.datasets[0].data = dcData;
@@ -140,18 +161,35 @@ client.on('message', (topic, payload) => {
     const element = document.getElementById(config.id);
     if (!element) return;
 
-    const value = isNaN(parseFloat(message)) ? message : parseFloat(message).toFixed(2);
-
+    // --- NEUE LOGIK: Wechselrichter-Status auswerten ---
     if (config.type === 'text') {
-        element.textContent = message;
-        if (message.toLowerCase().includes('netz') || message.toLowerCase().includes('ok')) {
+        // Prüfen, ob eine nackte Zahl kam, dann übersetzen. Sonst den Text nehmen.
+        let statusText = inverterStatuses[message] ? inverterStatuses[message] : message;
+        element.textContent = statusText;
+
+        const textLower = statusText.toLowerCase();
+        
+        // Farbe zuweisen basierend auf Status
+        if (textLower.includes('on-grid') || textLower.includes('running') || textLower.includes('ok')) {
             element.className = 'status-badge status-online';
-        } else {
+            element.style.backgroundColor = '#4caf50'; // sattes Grün
+            element.style.color = 'white';
+        } else if (textLower.includes('shutdown') || textLower.includes('fault') || textLower.includes('disconnected')) {
             element.className = 'status-badge status-offline';
+            element.style.backgroundColor = '#f44336'; // leuchtendes Rot
+            element.style.color = 'white';
+        } else {
+            // Für Standby, Starting, Detecting etc. (neutrale Farbe)
+            element.className = 'status-badge';
+            element.style.backgroundColor = '#607d8b'; // elegantes Blaugrau
+            element.style.color = 'white';
         }
-    } else {
-        element.innerHTML = `${value}<span class="unit">${config.unit}</span>`;
+        return; // Text-Verarbeitung hier beenden
     }
+
+    // --- Werteverarbeitung für Zahlen ---
+    const value = isNaN(parseFloat(message)) ? message : parseFloat(message).toFixed(2);
+    element.innerHTML = `${value}<span class="unit">${config.unit}</span>`;
 
     // --- Live-Berechnung für die Gesamtleistung Kachel ---
     if (topic === 'home/haus/zentral/pv/dcleistung') currentDC = isNaN(Number(value)) ? 0 : Number(value);
