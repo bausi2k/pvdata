@@ -6,9 +6,7 @@
     <title>PV-Dashboard - Sonnenblumenweg</title>
     
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css"/>
-    
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    
     <link rel="stylesheet" href="style.css">
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -17,33 +15,29 @@
 
     <main class="container">
 
-		<header>
-		            <div style="display: flex; justify-content: center; align-items: center; position: relative; margin-bottom: 1rem;">
-		                <h1 style="margin-bottom: 0;">PV-Anlage Sonnenblumenweg</h1>
+        <header>
+            <div style="display: flex; justify-content: center; align-items: center; position: relative; margin-bottom: 1rem;">
+                <h1 style="margin-bottom: 0;">PV-Anlage Sonnenblumenweg</h1>
                 
-		                <button id="theme-toggle" class="outline" style="position: absolute; right: 0; border: none; background: transparent; padding: 0.5rem; cursor: pointer; color: var(--pico-contrast);">
-		                    <i class="fas fa-moon fa-lg"></i>
-		                </button>
-		            </div>
+                <button id="theme-toggle" class="outline" style="position: absolute; right: 0; border: none; background: transparent; padding: 0.5rem; cursor: pointer; color: var(--pico-contrast);">
+                    <i class="fas fa-moon fa-lg"></i>
+                </button>
+            </div>
             
-		            <div class="wr-status-container" style="margin-bottom: 1rem;">
-		                Leistung Module: <strong>11kW Ost/West</strong> | 
-		                Leistung Wechselrichter: <strong>8,8kW</strong> | 
-		                Batteriekapazität: <strong>5kWh</strong>
-		            </div>
+            <div class="wr-status-container" style="margin-bottom: 1rem;">
+                Leistung Module: <strong>11kW Ost/West</strong> | 
+                Leistung Wechselrichter: <strong>8,8kW</strong> | 
+                Batteriekapazität: <strong>5kWh</strong>
+            </div>
             
-		            <div class="wr-status-container">
-		                Wechselrichter Status: <mark id="wr-status" class="status-badge">Verbinde...</mark>
-		                <br>
-		                <small>MQTT: <span id="mqtt-status">...</span></small>
-		            </div>
-		        </header>
+            <div class="wr-status-container">
+                Wechselrichter Status: <mark id="wr-status" class="status-badge">Verbinde...</mark>
+                <br>
+                <small>MQTT: <span id="mqtt-status">...</span></small>
+            </div>
+        </header>
 
         <div class="grid-4">
-            <article>
-                <header><strong>DC-Leistung</strong></header>
-                <span id="pv-dc" class="data-value">--<span class="unit">kW</span></span>
-            </article>
             <article>
                 <header><strong>AC-Leistung</strong></header>
                 <span id="pv-ac" class="data-value">--<span class="unit">kW</span></span>
@@ -60,7 +54,15 @@
                 <header><strong>Tagesproduktion</strong></header>
                 <span id="pv-day-energy" class="data-value">--<span class="unit">kWh</span></span>
             </article>
-            
+        </div>
+
+        <hr style="margin: 2rem 0; opacity: 0.5;">
+
+        <div class="grid-4">
+            <article>
+                <header><strong>DC-Leistung</strong></header>
+                <span id="pv-dc" class="data-value">--<span class="unit">kW</span></span>
+            </article>
             <article>
                 <header><strong>Akku Ladestand</strong></header>
                 <div style="display: flex; align-items: center; justify-content: center; gap: 0.75rem;">
@@ -74,14 +76,18 @@
             </article>
         </div>
 
+        <hr style="margin: 2rem 0; opacity: 0.5;">
+
         <article>
-            <header><strong>Leistungsverlauf (Live)</strong></header>
+            <header><strong>Leistungsverlauf</strong></header>
             <div id="chart-wrapper">
                 <canvas id="pvChart"></canvas>
             </div>
         </article>
+		
+		 <hr style="margin: 2rem 0; opacity: 0.5;">
 
-        <div class="grid-4" style="margin-top: 1.5rem;">
+        <div class="grid-4" style="margin-top: 2rem;">
             <article>
                 <header><strong>Wochenenergie</strong></header>
                 <span id="pv-week" class="data-value">--<span class="unit">kWh</span></span>
@@ -110,13 +116,7 @@
             </small>
         </footer>
 
-    </main>
-
-    <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
-    <script src="app.js"></script>
-
-</body>
-<div id="cookie-banner" class="cookie-banner" style="display: none;">
+        <div id="cookie-banner" class="cookie-banner" style="display: none;">
             <article style="margin: 0; padding: 1rem; display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap;">
                 <div>
                     <strong>🍪 Hinweis zum Datenschutz</strong><br>
@@ -125,4 +125,11 @@
                 <button id="accept-cookies" style="margin: 0; width: auto; padding: 0.5rem 1rem;">Verstanden</button>
             </article>
         </div>
+
+    </main>
+
+    <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+    <script src="app.js"></script>
+
+</body>
 </html>
