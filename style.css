@@ -100,3 +100,16 @@ footer a.secondary {
     color: inherit;
     text-decoration: underline;
 }
+
+/* Cookie Banner */
+.cookie-banner {
+    position: fixed;
+    bottom: 1rem;
+    left: 1rem;
+    right: 1rem;
+    z-index: 999;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    border-radius: var(--pico-border-radius);
+    max-width: 800px;
+    margin: 0 auto;
+}
