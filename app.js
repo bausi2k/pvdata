@@ -56,20 +56,14 @@ const topics = {
     'home/haus/zentral/pv/wrstatus': { id: 'wr-status', type: 'text' },
     'home/haus/zentral/pv/dcleistung': { id: 'pv-dc', unit: ' kW', decimals: 2 }, 
     'home/haus/zentral/pv/leistung': { id: 'pv-ac', unit: ' kW', decimals: 2 },   
-    
-    // Netzleistung auf 3 Nachkommastellen
     'home/haus/zentral/pv/Momentanleistung': { id: 'net-power', unit: ' kW', decimals: 3 }, 
-    
     'home/haus/zentral/pv/tagesenergy': { id: 'pv-day-energy', unit: ' kWh', decimals: 2 },
     'home/haus/zentral/pv/pv_anlage_totalweek_energy': { id: 'pv-week', unit: ' kWh', decimals: 2 },
     'home/haus/zentral/pv/pv_anlage_totalmonth_energy': { id: 'pv-month', unit: ' kWh', decimals: 2 },
     'home/haus/zentral/pv/pv_anlage_totalyear_energy': { id: 'pv-year', unit: ' kWh', decimals: 2 },
     'home/haus/zentral/pv/gesamtenergie': { id: 'pv-total-energy', unit: ' kWh', decimals: 2 },
     'home/haus/zentral/pv/luna/soc': { id: 'pv-battery-soc', unit: ' %', decimals: 0 },
-    
-    // Akkuleistung auf 3 Nachkommastellen
     'home/haus/zentral/pv/luna/power': { id: 'pv-battery-power', unit: ' kW', decimals: 3 },
-    
     'home/haus/zentral/pv/historie': { type: 'history' } 
 };
 
@@ -87,6 +81,10 @@ function initChart() {
     if (!canvasElement) return;
     const ctx = canvasElement.getContext('2d');
     
+    // Wir setzen die Textfarbe für die Achsen auf eine CSS-Variable von PicoCSS,
+    // damit das Diagramm im Dark-Mode und Light-Mode gut lesbar bleibt.
+    const textColor = getComputedStyle(document.documentElement).getPropertyValue('--pico-color').trim() || '#666';
+
     pvChart = new Chart(ctx, {
         type: 'line',
         data: {
@@ -103,12 +101,21 @@ function initChart() {
             locale: 'de-DE', 
             responsive: true,
             maintainAspectRatio: false,
+            color: textColor,
             scales: {
-                y: { title: { display: true, text: 'Leistung (kW)' } },
-                x: { ticks: { maxTicksLimit: 12 } } 
+                y: { 
+                    title: { display: true, text: 'Leistung (kW)', color: textColor },
+                    ticks: { color: textColor }
+                },
+                x: { 
+                    ticks: { maxTicksLimit: 12, color: textColor } 
+                } 
             },
             plugins: {
-                legend: { position: 'top' },
+                legend: { 
+                    position: 'top',
+                    labels: { color: textColor }
+                },
                 tooltip: {
                     callbacks: {
                         label: function(context) {
@@ -151,7 +158,6 @@ client.on('message', (topic, payload) => {
     const config = topics[topic];
     if (!config) return;
 
-    // ----- SPEZIALFALL: Historien-Datenbank von Node-RED -----
     if (config.type === 'history') {
         try {
             const historyData = JSON.parse(message);
@@ -187,11 +193,9 @@ client.on('message', (topic, payload) => {
         return; 
     }
 
-    // ----- STANDARD: Live-Werte für die Kacheln -----
     const element = document.getElementById(config.id);
     if (!element) return;
 
-    // --- LOGIK: Wechselrichter-Status ---
     if (config.type === 'text') {
         let statusText = inverterStatuses[message] ? inverterStatuses[message] : message;
         element.textContent = statusText;
@@ -214,13 +218,11 @@ client.on('message', (topic, payload) => {
         return; 
     }
 
-    // --- Werteverarbeitung für Zahlen ---
     const numericValue = parseFloat(message);
     if (!isNaN(numericValue)) {
         let displayValue = formatNumber(numericValue, config.decimals);
         let extraText = "";
 
-        // Text-Logik für Netzleistung (mit Zeilenumbruch <br>)
         if (topic === 'home/haus/zentral/pv/Momentanleistung') {
             if (numericValue < 0) {
                 extraText = "<br><small class='secondary'>einspeisen</small>";
@@ -229,7 +231,6 @@ client.on('message', (topic, payload) => {
                 extraText = "<br><small class='secondary'>beziehen</small>";
             }
         } 
-        // Text-Logik für Akku Leistung (mit Zeilenumbruch <br>)
         else if (topic === 'home/haus/zentral/pv/luna/power') {
             if (numericValue < 0) {
                 extraText = "<br><small class='secondary'>laden</small>";
@@ -238,14 +239,36 @@ client.on('message', (topic, payload) => {
                 extraText = "<br><small class='secondary'>entladen</small>";
             }
         }
+        else if (topic === 'home/haus/zentral/pv/luna/soc') {
+            const iconElement = document.getElementById('battery-icon');
+            if (iconElement) {
+                let iconClass = 'fa-battery-full'; 
+                let iconColor = '#4caf50'; 
 
-        // Der extraText (inkl. Zeilenumbruch) wird hinter der Einheit angehängt
+                if (numericValue <= 10) {
+                    iconClass = 'fa-battery-empty';
+                    iconColor = '#f44336'; 
+                } else if (numericValue <= 30) {
+                    iconClass = 'fa-battery-quarter';
+                    iconColor = '#ff9800'; 
+                } else if (numericValue <= 50) {
+                    iconClass = 'fa-battery-half';
+                    iconColor = '#ffc107'; 
+                } else if (numericValue <= 85) {
+                    iconClass = 'fa-battery-three-quarters';
+                    iconColor = '#8bc34a'; 
+                } 
+
+                iconElement.className = `fas ${iconClass} data-value`;
+                iconElement.style.color = iconColor;
+            }
+        }
+
         element.innerHTML = `${displayValue}<span class="unit">${config.unit}</span>${extraText}`;
     } else {
         element.innerHTML = `${message}<span class="unit">${config.unit}</span>`;
     }
 
-    // --- Live-Berechnung für die Gesamtleistung Kachel ---
     if (topic === 'home/haus/zentral/pv/dcleistung') currentDC = isNaN(numericValue) ? 0 : numericValue;
     if (topic === 'home/haus/zentral/pv/leistung') currentAC = isNaN(numericValue) ? 0 : numericValue;
     if (topic === 'home/haus/zentral/pv/Momentanleistung') currentNet = isNaN(numericValue) ? 0 : numericValue;
@@ -261,7 +284,54 @@ client.on('message', (topic, payload) => {
     }
 });
 
+// --- 4. Dark Mode / Theme Logik ---
+function initThemeToggle() {
+    const toggleBtn = document.getElementById('theme-toggle');
+    const htmlElement = document.documentElement;
+    const icon = toggleBtn.querySelector('i');
+
+    // Gespeichertes Theme laden oder System-Präferenz prüfen
+    const savedTheme = localStorage.getItem('theme');
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+
+    // Theme setzen
+    if (savedTheme === 'dark' || (!savedTheme && prefersDark)) {
+        htmlElement.setAttribute('data-theme', 'dark');
+        icon.classList.replace('fa-moon', 'fa-sun');
+    } else {
+        htmlElement.setAttribute('data-theme', 'light');
+        icon.classList.replace('fa-sun', 'fa-moon');
+    }
+
+    // Klick-Event für den Button
+    toggleBtn.addEventListener('click', () => {
+        const currentTheme = htmlElement.getAttribute('data-theme');
+        const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+        
+        htmlElement.setAttribute('data-theme', newTheme);
+        localStorage.setItem('theme', newTheme);
+        
+        if (newTheme === 'dark') {
+            icon.classList.replace('fa-moon', 'fa-sun');
+        } else {
+            icon.classList.replace('fa-sun', 'fa-moon');
+        }
+        
+        // Chart.js Farben aktualisieren
+        if(pvChart) {
+            const newTextColor = getComputedStyle(document.documentElement).getPropertyValue('--pico-color').trim();
+            pvChart.options.color = newTextColor;
+            pvChart.options.scales.x.ticks.color = newTextColor;
+            pvChart.options.scales.y.ticks.color = newTextColor;
+            pvChart.options.scales.y.title.color = newTextColor;
+            pvChart.options.plugins.legend.labels.color = newTextColor;
+            pvChart.update();
+        }
+    });
+}
+
 // Start der Anwendung
 window.onload = () => {
+    initThemeToggle();
     initChart();
 };

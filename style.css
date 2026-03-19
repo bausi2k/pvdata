@@ -16,18 +16,25 @@ header {
     font-size: 0.9rem;
     font-weight: bold;
     transition: background-color 0.3s ease;
+    
+    /* Fallback für neutrale Zustände */
+    background-color: var(--pico-secondary-background);
+    color: var(--pico-secondary-inverse);
+    border: 1px solid var(--pico-secondary-border);
 }
 
 .status-online { 
-    background: #e6fffa; 
-    color: #00897b; 
-    border: 1px solid #00897b; 
+    /* Nutzt das native Grün/Primary von PicoCSS (passt sich an Dark/Light Mode an) */
+    background: var(--pico-primary-background); 
+    color: var(--pico-primary-inverse); 
+    border: 1px solid var(--pico-primary-border); 
 }
 
 .status-offline { 
-    background: #fff5f5; 
-    color: #e53e3e; 
-    border: 1px solid #e53e3e; 
+    /* Nutzt das native Rot/Invalid von PicoCSS (passt sich an Dark/Light Mode an) */
+    background: var(--pico-form-element-invalid-active-background-color); 
+    color: white; 
+    border: 1px solid var(--pico-form-element-invalid-border-color); 
 }
 
 /* Daten-Anzeige */
@@ -56,6 +63,7 @@ header {
 /* Layout Grids */
 .grid-4 {
     display: grid;
+    /* Deine geniale auto-fit Lösung für perfektes Responsive Design! */
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
     gap: 1rem;
     margin-bottom: 1.5rem;
