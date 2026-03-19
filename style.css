@@ -129,3 +129,14 @@ footer a.secondary {
 .value-changed {
     animation: flashUpdate 0.8s ease-out;
 }
+
+/* Erlaubt das Überschreiben der Progress-Farbe via Inline-Style */
+progress {
+    color: var(--pico-progress-color);
+}
+progress::-webkit-progress-value {
+    background-color: var(--pico-progress-color);
+}
+progress::-moz-progress-bar {
+    background-color: var(--pico-progress-color);
+}

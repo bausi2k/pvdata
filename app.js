@@ -1,6 +1,6 @@
 /**
- * app.js - PV Dashboard Sonnenblumenweg
- * Steuerung der MQTT-Kommunikation und Visualisierung
+ * app.js - PV Dashboard Sonnenblumenweg v1.2.3
+ * Fokus: Dynamische Nullpunkt-Progressbars & reparierte Batterie-Icons
  */
 
 // --- 1. Konfiguration ---
@@ -9,44 +9,18 @@ const HIVE_MQ_PORT = 8884;
 const HIVE_MQ_USER = 'sbwwetter';
 const HIVE_MQ_PASS = 'pbd7chu6kba!zrd2GTG';
 
-let currentDC = 0;
-let currentAC = 0;
-let currentNet = 0; 
-let pvChart;
+let currentDC = 0, currentAC = 0, currentNet = 0, pvChart;
 
 const inverterStatuses = {
-    "0": "Standby: initializing",
-    "1": "Standby: detecting insulation resistance",
-    "2": "Standby: detecting irradiation",
-    "3": "Standby: grid detecting",
-    "256": "Starting",
-    "512": "On-grid",
-    "513": "Grid connection: power limited",
-    "514": "Grid connection: self-derating",
-    "515": "Off-grid Running",
-    "768": "Shutdown: fault",
-    "769": "Shutdown: command",
-    "770": "Shutdown: OVGR",
-    "771": "Shutdown: communication disconnected",
-    "772": "Shutdown: power limited",
-    "773": "Shutdown: manual startup required",
-    "774": "Shutdown: DC switches disconnected",
-    "775": "Shutdown: rapid cutoff",
-    "776": "Shutdown: input underpower",
-    "780": "Shutdown: Battery End of Discharge",
-    "1025": "Grid scheduling: cosΦ-P curve",
-    "1026": "Grid scheduling: Q-U curve",
-    "1027": "Grid scheduling: PF- U curve",
-    "1028": "Grid scheduling: dry contact",
-    "1029": "Grid scheduling: Q-P curve",
-    "1280": "Spot-check ready",
-    "1281": "Spot-checking",
-    "1536": "Inspecting",
-    "1792": "AFCI self check",
-    "2048": "I-V scanning",
-    "2304": "DC input detection",
-    "2560": "Running: off-grid charging",
-    "40960": "Standby: no irradiation"
+    "0": "Standby: initializing", "1": "Standby: detecting insulation resistance",
+    "2": "Standby: detecting irradiation", "3": "Standby: grid detecting",
+    "256": "Starting", "512": "On-grid", "513": "Grid connection: power limited",
+    "514": "Grid connection: self-derating", "515": "Off-grid Running",
+    "768": "Shutdown: fault", "769": "Shutdown: command", "770": "Shutdown: OVGR",
+    "771": "Shutdown: communication disconnected", "772": "Shutdown: power limited",
+    "773": "Shutdown: manual startup required", "774": "Shutdown: DC switches disconnected",
+    "775": "Shutdown: rapid cutoff", "776": "Shutdown: input underpower",
+    "780": "Shutdown: Battery End of Discharge", "40960": "Standby: no irradiation"
 };
 
 const topics = {
@@ -61,96 +35,58 @@ const topics = {
     'home/haus/zentral/pv/gesamtenergie': { id: 'pv-total-energy', unit: ' kWh', decimals: 2 },
     'home/haus/zentral/pv/luna/soc': { id: 'pv-battery-soc', unit: ' %', decimals: 0 },
     'home/haus/zentral/pv/luna/power': { id: 'pv-battery-power', unit: ' kW', decimals: 3 },
+    'home/haus/zentral/pv/stats/comparison': { type: 'json-stats' },
     'home/haus/zentral/pv/historie': { type: 'history' } 
 };
 
+// Hilfsfunktionen
 function formatNumber(num, decimals) {
-    return new Intl.NumberFormat('de-DE', {
-        minimumFractionDigits: decimals,
-        maximumFractionDigits: decimals
-    }).format(num);
+    return new Intl.NumberFormat('de-DE', { minimumFractionDigits: decimals, maximumFractionDigits: decimals }).format(num);
 }
 
-// Hilfsfunktion für den visuellen Flash-Effekt
 function triggerFlash(element) {
     element.classList.remove('value-changed');
-    void element.offsetWidth; // Trigger Reflow (startet die Animation neu)
+    void element.offsetWidth; 
     element.classList.add('value-changed');
 }
 
 // --- 2. Chart Initialisierung ---
 function initChart() {
-    const canvasElement = document.getElementById('pvChart');
-    if (!canvasElement) return;
-    const ctx = canvasElement.getContext('2d');
-    
-    const textColor = getComputedStyle(document.documentElement).getPropertyValue('--pico-color').trim() || '#666';
+    const canvas = document.getElementById('pvChart');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const textColor = getComputedStyle(document.documentElement).getPropertyValue('--pico-color').trim();
 
     pvChart = new Chart(ctx, {
         type: 'line',
-        data: {
-            labels: [], 
-            datasets: [
-                { label: 'DC-Leistung (kW)', data: [], borderColor: '#fbc02d', backgroundColor: '#fbc02d33', fill: false, tension: 0.3 },
-                { label: 'AC-Leistung (kW)', data: [], borderColor: '#1976d2', backgroundColor: '#1976d233', fill: false, tension: 0.3 },
-                { label: 'Netzleistung (kW)', data: [], borderColor: '#d32f2f', backgroundColor: '#d32f2f33', fill: false, tension: 0.3 },
-                { label: 'Akkuleistung (kW)', data: [], borderColor: '#7b1fa2', backgroundColor: '#7b1fa233', fill: true, tension: 0.3, borderDash: [5, 5] },
-                { label: 'Hausleistung (kW)', data: [], borderColor: '#388e3c', backgroundColor: '#388e3c33', fill: false, tension: 0.3 } 
-            ]
-        },
-        options: {
+        data: { labels: [], datasets: [
+            { label: 'DC (kW)', data: [], borderColor: '#fbc02d', tension: 0.3 },
+            { label: 'AC (kW)', data: [], borderColor: '#1976d2', tension: 0.3 },
+            { label: 'Netz (kW)', data: [], borderColor: '#d32f2f', tension: 0.3 },
+            { label: 'Akku (kW)', data: [], borderColor: '#7b1fa2', borderDash: [5, 5], tension: 0.3 },
+            { label: 'Gesamt (kW)', data: [], borderColor: '#388e3c', tension: 0.3 }
+        ]},
+        options: { 
             locale: 'de-DE', 
-            responsive: true,
-            maintainAspectRatio: false,
-            color: textColor,
-            scales: {
-                y: { 
-                    title: { display: true, text: 'Leistung (kW)', color: textColor },
-                    ticks: { color: textColor }
-                },
-                x: { 
-                    ticks: { maxTicksLimit: 12, color: textColor } 
-                } 
-            },
-            plugins: {
-                legend: { 
-                    position: 'top',
-                    labels: { color: textColor }
-                },
-                tooltip: {
-                    callbacks: {
-                        label: function(context) {
-                            let label = context.dataset.label || '';
-                            if (label) {
-                                label += ': ';
-                            }
-                            if (context.parsed.y !== null) {
-                                label += formatNumber(context.parsed.y, 2);
-                            }
-                            return label;
-                        }
-                    }
-                }
-            }
+            responsive: true, 
+            maintainAspectRatio: false, 
+            color: textColor, 
+            scales: { 
+                y: { ticks: { color: textColor } }, 
+                x: { ticks: { color: textColor } } 
+            } 
         }
     });
 }
 
-// --- 3. MQTT Verbindung aufbauen ---
-const clientUrl = `wss://${HIVE_MQ_HOST}:${HIVE_MQ_PORT}/mqtt`;
-const options = {
+// --- 3. MQTT Client ---
+const client = mqtt.connect(`wss://${HIVE_MQ_HOST}:${HIVE_MQ_PORT}/mqtt`, {
     clientId: 'pv-dashboard-' + Math.random().toString(16).substr(2, 8),
-    username: HIVE_MQ_USER,
-    password: HIVE_MQ_PASS,
-    clean: true
-};
-
-const client = mqtt.connect(clientUrl, options);
-const mqttStatusElement = document.getElementById('mqtt-status');
+    username: HIVE_MQ_USER, password: HIVE_MQ_PASS, clean: true
+});
 
 client.on('connect', () => {
-    mqttStatusElement.textContent = 'Verbunden ✅';
-    mqttStatusElement.style.color = 'green';
+    document.getElementById('mqtt-status').textContent = 'Verbunden ✅';
     client.subscribe(Object.keys(topics));
 });
 
@@ -161,187 +97,187 @@ client.on('message', (topic, payload) => {
 
     if (config.type === 'history') {
         try {
-            const historyData = JSON.parse(message);
-            const labels = [];
-            const dcData = [];
-            const acData = [];
-            const netData = [];
-            const battData = [];
-            const totalData = []; 
-
-            historyData.forEach(point => {
-                labels.push(point.time);
-                dcData.push(point.dc);
-                acData.push(point.ac);
-                netData.push(point.net);
-                battData.push(point.batt !== undefined ? Number(point.batt) : 0);
-                totalData.push(point.total !== undefined ? Number(point.total) : 0);
-            });
-
+            const data = JSON.parse(message);
             if (pvChart) {
-                pvChart.data.labels = labels;
-                pvChart.data.datasets[0].data = dcData;
-                pvChart.data.datasets[1].data = acData;
-                pvChart.data.datasets[2].data = netData;
-                pvChart.data.datasets[3].data = battData;
-                pvChart.data.datasets[4].data = totalData; 
+                pvChart.data.labels = data.map(p => p.time);
+                pvChart.data.datasets[0].data = data.map(p => p.dc);
+                pvChart.data.datasets[1].data = data.map(p => p.ac);
+                pvChart.data.datasets[2].data = data.map(p => p.net);
+                pvChart.data.datasets[3].data = data.map(p => p.batt);
+                pvChart.data.datasets[4].data = data.map(p => p.total);
                 pvChart.update();
             }
-        } catch (e) {
-            console.error('Fehler beim Parsen der PV-Historie:', e);
-        }
-        return; 
+        } catch (e) { console.error("History Error:", e); }
+        return;
     }
 
+    // ----- SPEZIALFALL: Node-RED Statistiken mit dynamischen Progress Bars -----
+    if (config.type === 'json-stats') {
+        try {
+            const stats = JSON.parse(message);
+            const heuteEl = document.getElementById('pv-day-energy');
+            const heute = heuteEl ? parseFloat(heuteEl.innerText.replace(',', '.')) || 0 : 0;
+
+            const render = (id, data) => {
+                const el = document.getElementById(id);
+                if (!el || !data) return;
+                
+                const diff = heute - data.schnitt;
+                const color = diff >= 0 ? 'var(--pico-primary)' : '#e53e3e';
+                
+                // Dynamisches Limit berechnen (Rundet auf nächste 5 auf, mind. 5)
+                let limit = Math.ceil(Math.abs(diff) / 5) * 5;
+                if (limit === 0) limit = 5;
+
+                // Da Progress Bars bei 0 anfangen, verschieben wir den Wert um das Limit
+                const progressMax = limit * 2;
+                const progressVal = limit + diff;
+
+                el.innerHTML = `
+                    <div style="margin-bottom: 0.5rem; display: flex; justify-content: space-between; align-items: flex-end;">
+                        <small>Schnitt (${data.tage} T):</small>
+                        <strong>${formatNumber(data.schnitt, 2)} kWh</strong>
+                    </div>
+                    
+                    <progress value="${progressVal}" max="${progressMax}" style="--pico-progress-color: ${color}; margin-bottom: 0.2rem; height: 12px;"></progress>
+                    
+                    <div style="display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--pico-muted-color); margin-bottom: 1rem;">
+                        <span>-${limit}</span>
+                        <span>0</span>
+                        <span>+${limit}</span>
+                    </div>
+                    
+                    <div style="text-align: center;">
+                        <small>Abweichung: </small>
+                        <strong style="color: ${color}">${diff >= 0 ? '+' : ''}${formatNumber(diff, 2)} kWh</strong>
+                    </div>
+                `;
+            };
+
+            render('stats-week', stats.week);
+            render('stats-month', stats.month);
+            render('stats-year', stats.year);
+        } catch (e) { console.error("Stats Error:", e); }
+        return;
+    }
+
+    // ----- STANDARD: Live-Kacheln -----
     const element = document.getElementById(config.id);
     if (!element) return;
 
-    // --- LOGIK: Wechselrichter-Status ---
     if (config.type === 'text') {
-        let statusText = inverterStatuses[message] ? inverterStatuses[message] : message;
-        
-        // Nur updaten und animieren, wenn sich der Text geändert hat
+        let statusText = inverterStatuses[message] || message;
         if (element.textContent !== statusText) {
             element.textContent = statusText;
-            const textLower = statusText.toLowerCase();
-            
-            if (textLower.includes('on-grid') || textLower.includes('running') || textLower.includes('ok')) {
-                element.className = 'status-badge status-online';
-            } else if (textLower.includes('shutdown') || textLower.includes('fault') || textLower.includes('disconnected')) {
-                element.className = 'status-badge status-offline';
-            } else {
-                element.className = 'status-badge';
-            }
+            element.className = statusText.toLowerCase().includes('grid') ? 'status-badge status-online' : 'status-badge';
         }
-        return; 
-    }
-
-    // --- Werteverarbeitung für Zahlen ---
-    const numericValue = parseFloat(message);
-    let newHTML = "";
-
-    if (!isNaN(numericValue)) {
-        let displayValue = formatNumber(numericValue, config.decimals);
-        let extraText = "";
-
-        if (topic === 'home/haus/zentral/pv/Momentanleistung') {
-            if (numericValue < 0) {
-                extraText = "<br><small class='secondary'>einspeisen</small>";
-                displayValue = formatNumber(Math.abs(numericValue), config.decimals);
-            } else if (numericValue > 0) {
-                extraText = "<br><small class='secondary'>beziehen</small>";
-            }
-        } 
-        else if (topic === 'home/haus/zentral/pv/luna/power') {
-            if (numericValue < 0) {
-                extraText = "<br><small class='secondary'>laden</small>";
-                displayValue = formatNumber(Math.abs(numericValue), config.decimals);
-            } else if (numericValue > 0) {
-                extraText = "<br><small class='secondary'>entladen</small>";
-            }
-        }
-        else if (topic === 'home/haus/zentral/pv/luna/soc') {
-            const iconElement = document.getElementById('battery-icon');
-            if (iconElement) {
-                let iconClass = 'fa-battery-full'; 
-                let iconColor = '#4caf50'; 
-
-                if (numericValue <= 10) {
-                    iconClass = 'fa-battery-empty'; iconColor = '#f44336'; 
-                } else if (numericValue <= 30) {
-                    iconClass = 'fa-battery-quarter'; iconColor = '#ff9800'; 
-                } else if (numericValue <= 50) {
-                    iconClass = 'fa-battery-half'; iconColor = '#ffc107'; 
-                } else if (numericValue <= 85) {
-                    iconClass = 'fa-battery-three-quarters'; iconColor = '#8bc34a'; 
-                } 
-
-                iconElement.className = `fas ${iconClass} data-value`;
-                iconElement.style.color = iconColor;
-            }
-        }
-
-        newHTML = `${displayValue}<span class="unit">${config.unit}</span>${extraText}`;
     } else {
-        newHTML = `${message}<span class="unit">${config.unit}</span>`;
+        const val = parseFloat(message);
+        if (!isNaN(val)) {
+            let displayVal = formatNumber(val, config.decimals);
+            let extra = "";
+            
+            if (topic.includes('Momentanleistung') || topic.includes('luna/power')) {
+                const isNet = topic.includes('Momentanleistung');
+                extra = `<br><small class='secondary'>${val < 0 ? (isNet ? 'einspeisen' : 'laden') : (isNet ? 'beziehen' : 'entladen')}</small>`;
+                displayVal = formatNumber(Math.abs(val), config.decimals);
+            } 
+            // WIEDERHERGESTELLT: Batterie-Icon Logik (Farbe UND Icon-Klasse)
+            else if (topic.includes('luna/soc')) {
+                const icon = document.getElementById('battery-icon');
+                if (icon) {
+                    let iconClass = 'fa-battery-full'; 
+                    let iconColor = '#4caf50'; 
+
+                    if (val <= 10) {
+                        iconClass = 'fa-battery-empty'; iconColor = '#f44336'; 
+                    } else if (val <= 30) {
+                        iconClass = 'fa-battery-quarter'; iconColor = '#ff9800'; 
+                    } else if (val <= 50) {
+                        iconClass = 'fa-battery-half'; iconColor = '#ffc107'; 
+                    } else if (val <= 85) {
+                        iconClass = 'fa-battery-three-quarters'; iconColor = '#8bc34a'; 
+                    } 
+
+                    icon.className = `fas ${iconClass} data-value`;
+                    icon.style.color = iconColor;
+                }
+            }
+
+            const newHTML = `${displayVal}<span class="unit">${config.unit}</span>${extra}`;
+            if (element.innerHTML !== newHTML) {
+                element.innerHTML = newHTML;
+                triggerFlash(element);
+            }
+        }
     }
 
-    // Nur einsetzen und flashen, wenn der Wert sich wirklich geändert hat!
-    if (element.innerHTML !== newHTML) {
-        element.innerHTML = newHTML;
-        triggerFlash(element);
-    }
+    if (topic.includes('dcleistung')) currentDC = parseFloat(message) || 0;
+    if (topic.includes('leistung') && !topic.includes('dc')) currentAC = parseFloat(message) || 0;
+    if (topic.includes('Momentanleistung')) currentNet = parseFloat(message) || 0;
 
-    // --- Live-Berechnung für die Gesamtleistung Kachel ---
-    if (topic === 'home/haus/zentral/pv/dcleistung') currentDC = isNaN(numericValue) ? 0 : numericValue;
-    if (topic === 'home/haus/zentral/pv/leistung') currentAC = isNaN(numericValue) ? 0 : numericValue;
-    if (topic === 'home/haus/zentral/pv/Momentanleistung') currentNet = isNaN(numericValue) ? 0 : numericValue;
-
-    if (topic === 'home/haus/zentral/pv/leistung' || topic === 'home/haus/zentral/pv/Momentanleistung') {
-        const total = currentAC + currentNet; 
-        const displayTotal = formatNumber(total, 2);
-        const newTotalHTML = `${displayTotal}<span class="unit"> kW</span>`;
-        
-        const totalElement = document.getElementById('pv-total');
-        if (totalElement && totalElement.innerHTML !== newTotalHTML) {
-            totalElement.innerHTML = newTotalHTML;
-            triggerFlash(totalElement);
+    const total = currentAC + currentNet;
+    const totalEl = document.getElementById('pv-total');
+    if (totalEl) {
+        const newTotalHTML = `${formatNumber(total, 2)}<span class="unit"> kW</span>`;
+        if (totalEl.innerHTML !== newTotalHTML) {
+            totalEl.innerHTML = newTotalHTML;
+            triggerFlash(totalEl);
         }
     }
 });
 
-// --- 4. Dark Mode / Theme Logik ---
+// --- 4. UI Funktionen ---
 function initThemeToggle() {
-    const toggleBtn = document.getElementById('theme-toggle');
-    const htmlElement = document.documentElement;
-    const icon = toggleBtn.querySelector('i');
+    const btn = document.getElementById('theme-toggle');
+    const html = document.documentElement;
+    if (!btn) return;
 
+    const icon = btn.querySelector('i');
+    
+    // 1. Gespeicherten Wert oder System-Standard beim Laden auslesen
     const savedTheme = localStorage.getItem('theme');
     const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
 
     if (savedTheme === 'dark' || (!savedTheme && prefersDark)) {
-        htmlElement.setAttribute('data-theme', 'dark');
-        icon.classList.replace('fa-moon', 'fa-sun');
+        html.setAttribute('data-theme', 'dark');
+        if (icon) icon.classList.replace('fa-moon', 'fa-sun');
     } else {
-        htmlElement.setAttribute('data-theme', 'light');
-        icon.classList.replace('fa-sun', 'fa-moon');
+        html.setAttribute('data-theme', 'light');
+        if (icon) icon.classList.replace('fa-sun', 'fa-moon');
     }
 
-    toggleBtn.addEventListener('click', () => {
-        const currentTheme = htmlElement.getAttribute('data-theme');
-        const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+    // 2. Klick-Event für das Umschalten
+    btn.addEventListener('click', () => {
+        const next = html.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+        html.setAttribute('data-theme', next);
+        localStorage.setItem('theme', next); // Im lokalen Speicher sichern
         
-        htmlElement.setAttribute('data-theme', newTheme);
-        localStorage.setItem('theme', newTheme);
-        
-        if (newTheme === 'dark') {
-            icon.classList.replace('fa-moon', 'fa-sun');
-        } else {
-            icon.classList.replace('fa-sun', 'fa-moon');
+        // Icon wechseln
+        if (icon) {
+            if (next === 'dark') {
+                icon.classList.replace('fa-moon', 'fa-sun');
+            } else {
+                icon.classList.replace('fa-sun', 'fa-moon');
+            }
         }
-        
+
+        // Chart-Farben anpassen
         if(pvChart) {
-            const newTextColor = getComputedStyle(document.documentElement).getPropertyValue('--pico-color').trim();
-            pvChart.options.color = newTextColor;
-            pvChart.options.scales.x.ticks.color = newTextColor;
-            pvChart.options.scales.y.ticks.color = newTextColor;
-            pvChart.options.scales.y.title.color = newTextColor;
-            pvChart.options.plugins.legend.labels.color = newTextColor;
+            const newColor = getComputedStyle(document.documentElement).getPropertyValue('--pico-color').trim();
+            pvChart.options.color = newColor;
+            pvChart.options.scales.x.ticks.color = newColor;
+            pvChart.options.scales.y.ticks.color = newColor;
             pvChart.update();
         }
     });
 }
 
-// --- 5. Cookie Banner Logik ---
 function initCookieBanner() {
     const banner = document.getElementById('cookie-banner');
-    const acceptBtn = document.getElementById('accept-cookies');
-    
-    if (!localStorage.getItem('cookieConsent')) {
-        banner.style.display = 'block'; 
-    }
-    
-    acceptBtn.addEventListener('click', () => {
+    if (!banner) return;
+    if (!localStorage.getItem('cookieConsent')) banner.style.display = 'block';
+    document.getElementById('accept-cookies').addEventListener('click', () => {
         localStorage.setItem('cookieConsent', 'true');
         banner.style.display = 'none';
     });

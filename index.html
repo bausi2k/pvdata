@@ -86,7 +86,9 @@
         </article>
 		
 		 <hr style="margin: 2rem 0; opacity: 0.5;">
-
+		 
+		<details>
+            <summary role="button" class="outline secondary">Langzeitstatistik</summary>
         <div class="grid-4" style="margin-top: 2rem;">
             <article>
                 <header><strong>Wochenenergie</strong></header>
@@ -105,7 +107,24 @@
                 <span id="pv-total-energy" class="data-value">--<span class="unit">kWh</span></span>
             </article>
         </div>
-
+		</details>
+		<details>
+		    <summary role="button" class="outline secondary">Erweiterte Energie-Statistiken (Tagesvergleich)</summary>
+		    <div class="grid">
+		        <article id="stats-week-card">
+		            <header><strong>Heute vs. Woche</strong></header>
+		            <div id="stats-week">Berechne...</div>
+		        </article>
+		        <article id="stats-month-card">
+		            <header><strong>Heute vs. Monat</strong></header>
+		            <div id="stats-month">Berechne...</div>
+		        </article>
+		        <article id="stats-year-card">
+		            <header><strong>Heute vs. Jahr</strong></header>
+		            <div id="stats-year">Berechne...</div>
+		        </article>
+		    </div>
+		</details>
         <footer>
             <small>
                 made with ❤️ and Google Gemini @ Gruber 🏡 
