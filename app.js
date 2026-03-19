@@ -9,13 +9,11 @@ const HIVE_MQ_PORT = 8884;
 const HIVE_MQ_USER = 'sbwwetter';
 const HIVE_MQ_PASS = 'pbd7chu6kba!zrd2GTG';
 
-// Zustandsvariablen für Berechnungen der Live-Kachel
 let currentDC = 0;
 let currentAC = 0;
 let currentNet = 0; 
 let pvChart;
 
-// Wörterbuch für die Wechselrichter-Statuscodes
 const inverterStatuses = {
     "0": "Standby: initializing",
     "1": "Standby: detecting insulation resistance",
@@ -51,7 +49,6 @@ const inverterStatuses = {
     "40960": "Standby: no irradiation"
 };
 
-// Zuordnung der Topics zu UI-Elementen
 const topics = {
     'home/haus/zentral/pv/wrstatus': { id: 'wr-status', type: 'text' },
     'home/haus/zentral/pv/dcleistung': { id: 'pv-dc', unit: ' kW', decimals: 2 }, 
@@ -67,12 +64,18 @@ const topics = {
     'home/haus/zentral/pv/historie': { type: 'history' } 
 };
 
-// Hilfsfunktion für die deutsche Zahlenformatierung
 function formatNumber(num, decimals) {
     return new Intl.NumberFormat('de-DE', {
         minimumFractionDigits: decimals,
         maximumFractionDigits: decimals
     }).format(num);
+}
+
+// Hilfsfunktion für den visuellen Flash-Effekt
+function triggerFlash(element) {
+    element.classList.remove('value-changed');
+    void element.offsetWidth; // Trigger Reflow (startet die Animation neu)
+    element.classList.add('value-changed');
 }
 
 // --- 2. Chart Initialisierung ---
@@ -81,8 +84,6 @@ function initChart() {
     if (!canvasElement) return;
     const ctx = canvasElement.getContext('2d');
     
-    // Wir setzen die Textfarbe für die Achsen auf eine CSS-Variable von PicoCSS,
-    // damit das Diagramm im Dark-Mode und Light-Mode gut lesbar bleibt.
     const textColor = getComputedStyle(document.documentElement).getPropertyValue('--pico-color').trim() || '#666';
 
     pvChart = new Chart(ctx, {
@@ -161,7 +162,6 @@ client.on('message', (topic, payload) => {
     if (config.type === 'history') {
         try {
             const historyData = JSON.parse(message);
-            
             const labels = [];
             const dcData = [];
             const acData = [];
@@ -196,29 +196,30 @@ client.on('message', (topic, payload) => {
     const element = document.getElementById(config.id);
     if (!element) return;
 
+    // --- LOGIK: Wechselrichter-Status ---
     if (config.type === 'text') {
         let statusText = inverterStatuses[message] ? inverterStatuses[message] : message;
-        element.textContent = statusText;
-
-        const textLower = statusText.toLowerCase();
         
-        if (textLower.includes('on-grid') || textLower.includes('running') || textLower.includes('ok')) {
-            element.className = 'status-badge status-online';
-            element.style.backgroundColor = '#4caf50'; 
-            element.style.color = 'white';
-        } else if (textLower.includes('shutdown') || textLower.includes('fault') || textLower.includes('disconnected')) {
-            element.className = 'status-badge status-offline';
-            element.style.backgroundColor = '#f44336'; 
-            element.style.color = 'white';
-        } else {
-            element.className = 'status-badge';
-            element.style.backgroundColor = '#607d8b'; 
-            element.style.color = 'white';
+        // Nur updaten und animieren, wenn sich der Text geändert hat
+        if (element.textContent !== statusText) {
+            element.textContent = statusText;
+            const textLower = statusText.toLowerCase();
+            
+            if (textLower.includes('on-grid') || textLower.includes('running') || textLower.includes('ok')) {
+                element.className = 'status-badge status-online';
+            } else if (textLower.includes('shutdown') || textLower.includes('fault') || textLower.includes('disconnected')) {
+                element.className = 'status-badge status-offline';
+            } else {
+                element.className = 'status-badge';
+            }
         }
         return; 
     }
 
+    // --- Werteverarbeitung für Zahlen ---
     const numericValue = parseFloat(message);
+    let newHTML = "";
+
     if (!isNaN(numericValue)) {
         let displayValue = formatNumber(numericValue, config.decimals);
         let extraText = "";
@@ -246,17 +247,13 @@ client.on('message', (topic, payload) => {
                 let iconColor = '#4caf50'; 
 
                 if (numericValue <= 10) {
-                    iconClass = 'fa-battery-empty';
-                    iconColor = '#f44336'; 
+                    iconClass = 'fa-battery-empty'; iconColor = '#f44336'; 
                 } else if (numericValue <= 30) {
-                    iconClass = 'fa-battery-quarter';
-                    iconColor = '#ff9800'; 
+                    iconClass = 'fa-battery-quarter'; iconColor = '#ff9800'; 
                 } else if (numericValue <= 50) {
-                    iconClass = 'fa-battery-half';
-                    iconColor = '#ffc107'; 
+                    iconClass = 'fa-battery-half'; iconColor = '#ffc107'; 
                 } else if (numericValue <= 85) {
-                    iconClass = 'fa-battery-three-quarters';
-                    iconColor = '#8bc34a'; 
+                    iconClass = 'fa-battery-three-quarters'; iconColor = '#8bc34a'; 
                 } 
 
                 iconElement.className = `fas ${iconClass} data-value`;
@@ -264,11 +261,18 @@ client.on('message', (topic, payload) => {
             }
         }
 
-        element.innerHTML = `${displayValue}<span class="unit">${config.unit}</span>${extraText}`;
+        newHTML = `${displayValue}<span class="unit">${config.unit}</span>${extraText}`;
     } else {
-        element.innerHTML = `${message}<span class="unit">${config.unit}</span>`;
+        newHTML = `${message}<span class="unit">${config.unit}</span>`;
     }
 
+    // Nur einsetzen und flashen, wenn der Wert sich wirklich geändert hat!
+    if (element.innerHTML !== newHTML) {
+        element.innerHTML = newHTML;
+        triggerFlash(element);
+    }
+
+    // --- Live-Berechnung für die Gesamtleistung Kachel ---
     if (topic === 'home/haus/zentral/pv/dcleistung') currentDC = isNaN(numericValue) ? 0 : numericValue;
     if (topic === 'home/haus/zentral/pv/leistung') currentAC = isNaN(numericValue) ? 0 : numericValue;
     if (topic === 'home/haus/zentral/pv/Momentanleistung') currentNet = isNaN(numericValue) ? 0 : numericValue;
@@ -276,10 +280,12 @@ client.on('message', (topic, payload) => {
     if (topic === 'home/haus/zentral/pv/leistung' || topic === 'home/haus/zentral/pv/Momentanleistung') {
         const total = currentAC + currentNet; 
         const displayTotal = formatNumber(total, 2);
+        const newTotalHTML = `${displayTotal}<span class="unit"> kW</span>`;
         
         const totalElement = document.getElementById('pv-total');
-        if (totalElement) {
-            totalElement.innerHTML = `${displayTotal}<span class="unit"> kW</span>`;
+        if (totalElement && totalElement.innerHTML !== newTotalHTML) {
+            totalElement.innerHTML = newTotalHTML;
+            triggerFlash(totalElement);
         }
     }
 });
@@ -290,11 +296,9 @@ function initThemeToggle() {
     const htmlElement = document.documentElement;
     const icon = toggleBtn.querySelector('i');
 
-    // Gespeichertes Theme laden oder System-Präferenz prüfen
     const savedTheme = localStorage.getItem('theme');
     const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
 
-    // Theme setzen
     if (savedTheme === 'dark' || (!savedTheme && prefersDark)) {
         htmlElement.setAttribute('data-theme', 'dark');
         icon.classList.replace('fa-moon', 'fa-sun');
@@ -303,7 +307,6 @@ function initThemeToggle() {
         icon.classList.replace('fa-sun', 'fa-moon');
     }
 
-    // Klick-Event für den Button
     toggleBtn.addEventListener('click', () => {
         const currentTheme = htmlElement.getAttribute('data-theme');
         const newTheme = currentTheme === 'light' ? 'dark' : 'light';
@@ -317,7 +320,6 @@ function initThemeToggle() {
             icon.classList.replace('fa-sun', 'fa-moon');
         }
         
-        // Chart.js Farben aktualisieren
         if(pvChart) {
             const newTextColor = getComputedStyle(document.documentElement).getPropertyValue('--pico-color').trim();
             pvChart.options.color = newTextColor;
@@ -335,21 +337,18 @@ function initCookieBanner() {
     const banner = document.getElementById('cookie-banner');
     const acceptBtn = document.getElementById('accept-cookies');
     
-    // Prüfen, ob der Nutzer schon mal auf "Verstanden" geklickt hat
     if (!localStorage.getItem('cookieConsent')) {
-        banner.style.display = 'block'; // Banner anzeigen
+        banner.style.display = 'block'; 
     }
     
-    // Wenn Button geklickt wird, im lokalen Speicher merken und Banner verstecken
     acceptBtn.addEventListener('click', () => {
         localStorage.setItem('cookieConsent', 'true');
         banner.style.display = 'none';
     });
 }
 
-// Start der Anwendung (HIER AUCH initCookieBanner() HINZUFÜGEN!)
 window.onload = () => {
     initThemeToggle();
-    initCookieBanner(); // <-- NEU
+    initCookieBanner();
     initChart();
 };

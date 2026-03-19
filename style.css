@@ -113,3 +113,19 @@ footer a.secondary {
     max-width: 800px;
     margin: 0 auto;
 }
+
+/* --- 5. Animation für Live-Updates --- */
+@keyframes flashUpdate {
+    0% { 
+        color: var(--pico-contrast); 
+        text-shadow: 0 0 10px var(--pico-primary); 
+    }
+    100% { 
+        color: var(--pico-primary); 
+        text-shadow: none; 
+    }
+}
+
+.value-changed {
+    animation: flashUpdate 0.8s ease-out;
+}

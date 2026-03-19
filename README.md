@@ -4,12 +4,12 @@ Dieses Dashboard visualisiert die Leistungs- und Energiedaten einer Photovoltaik
 
 ## Features
 
-* **Live-Monitoring**: Anzeige von DC-Leistung, AC-Leistung, aktueller Netzleistung und Tagesproduktion.
-* **Berechnete Akkuleistung**: Automatische Differenzberechnung (`DC-Leistung - AC-Leistung`) zur Visualisierung des Energieflusses in oder aus dem Speicher.
-* **Interaktiver Verlauf**: Ein Live-Liniendiagramm zeigt die Leistungsdaten der letzten Minuten an.
+* **Live-Monitoring**: Anzeige von DC-Leistung, AC-Leistung, aktueller Netzleistung, Tagesproduktion und Ladezustand des Akkus.
+* **Echte Akkuleistung**: Direkte Visualisierung des echten Batteriestroms inkl. automatischer Text-Erkennung ("laden" / "entladen").
+* **Intelligente Textausgabe**: Nackte Wechselrichter-Statuscodes werden automatisch in lesbare Texte und Farben übersetzt.
+* **Interaktiver Verlauf**: Ein Live-Liniendiagramm zeigt die historischen Leistungsdaten an.
 * **Energie-Statistiken**: Übersicht der Erträge für die aktuelle Woche, den Monat und das Jahr.
-* **Status-Anzeige**: Überprüfung des Wechselrichter-Status (String-basiert) und der MQTT-Verbindung.
-* **Responsive Design**: Optimierte Darstellung für Smartphones, Tablets und Desktop-PCs dank Pico CSS.
+* **Responsive Design & Dark Mode**: Optimierte Darstellung für Smartphones, Tablets und Desktop-PCs mit integriertem, speicherbarem Dark- und Light-Theme (Pico CSS).
 
 ## Projektstruktur
 
@@ -19,7 +19,7 @@ Das Projekt ist in saubere Module unterteilt, um die Wartung zu erleichtern:
 * `style.css`: Beinhaltet das gesamte Design, die Farbschemata und die responsiven Layout-Regeln.
 * `app.js`: Die Programmlogik zur MQTT-Kommunikation, Datenverarbeitung und Chart-Aktualisierung.
 * `impressum.html`: Rechtlich notwendige Informationen über den Medieninhaber.
-* `cookies.html`: Information über technisch notwendigen lokalen Speicher (`cookieConsent`).
+* `cookies.html`: Information über technisch notwendigen lokalen Speicher (`cookieConsent` & `theme`).
 
 ## Installation & Setup
 
@@ -38,7 +38,7 @@ Da das Dashboard rein auf Web-Technologien (HTML/JS) basiert, ist keine serverse
 
 ## Lizenz
 
-[cite_start]Dieses Programm ist freie Software: Sie können es unter den Bedingungen der **GNU General Public License**, wie von der Free Software Foundation veröffentlicht, weiterverteilen und/oder modifizieren[cite: 157]. [cite_start]Die Software wird ohne jegliche Gewährleistung verbreitet[cite: 158].
+Dieses Programm ist freie Software: Sie können es unter den Bedingungen der **GNU General Public License**, wie von der Free Software Foundation veröffentlicht, weiterverteilen und/oder modifizieren. Die Software wird ohne jegliche Gewährleistung verbreitet.
 
 ---
 *Erstellt mit ❤️ für die Bewohner im Sonnenblumenweg.*
