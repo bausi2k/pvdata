@@ -212,19 +212,19 @@ client.on('message', (topic, payload) => {
         }
     }
 
-    if (topic.includes('dcleistung')) currentDC = parseFloat(message) || 0;
-    if (topic.includes('leistung') && !topic.includes('dc')) currentAC = parseFloat(message) || 0;
-    if (topic.includes('Momentanleistung')) currentNet = parseFloat(message) || 0;
+	if (topic === 'home/haus/zentral/pv/dcleistung') currentDC = parseFloat(message) || 0;
+	    if (topic === 'home/haus/zentral/pv/leistung') currentAC = parseFloat(message) || 0;
+	    if (topic === 'home/haus/zentral/pv/Momentanleistung') currentNet = parseFloat(message) || 0;
 
-    const total = currentAC + currentNet;
-    const totalEl = document.getElementById('pv-total');
-    if (totalEl) {
-        const newTotalHTML = `${formatNumber(total, 2)}<span class="unit"> kW</span>`;
-        if (totalEl.innerHTML !== newTotalHTML) {
-            totalEl.innerHTML = newTotalHTML;
-            triggerFlash(totalEl);
-        }
-    }
+	    const total = currentAC + currentNet;
+	    const totalEl = document.getElementById('pv-total');
+	    if (totalEl) {
+	        const newTotalHTML = `${formatNumber(total, 2)}<span class="unit"> kW</span>`;
+	        if (totalEl.innerHTML !== newTotalHTML) {
+	            totalEl.innerHTML = newTotalHTML;
+	            triggerFlash(totalEl);
+	        }
+	    }
 });
 
 // --- 4. UI Funktionen ---
