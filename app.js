@@ -57,7 +57,7 @@ const topics = {
     'home/haus/zentral/pv/dcleistung': { id: 'pv-dc', unit: ' kW', decimals: 2 }, 
     'home/haus/zentral/pv/leistung': { id: 'pv-ac', unit: ' kW', decimals: 2 },   
     
-    // ANGEPASST: Netzleistung auf 3 Nachkommastellen
+    // Netzleistung auf 3 Nachkommastellen
     'home/haus/zentral/pv/Momentanleistung': { id: 'net-power', unit: ' kW', decimals: 3 }, 
     
     'home/haus/zentral/pv/tagesenergy': { id: 'pv-day-energy', unit: ' kWh', decimals: 2 },
@@ -67,7 +67,7 @@ const topics = {
     'home/haus/zentral/pv/gesamtenergie': { id: 'pv-total-energy', unit: ' kWh', decimals: 2 },
     'home/haus/zentral/pv/luna/soc': { id: 'pv-battery-soc', unit: ' %', decimals: 0 },
     
-    // NEU: Akkuleistung (Laden/Entladen) auf 3 Nachkommastellen
+    // Akkuleistung auf 3 Nachkommastellen
     'home/haus/zentral/pv/luna/power': { id: 'pv-battery-power', unit: ' kW', decimals: 3 },
     
     'home/haus/zentral/pv/historie': { type: 'history' } 
@@ -220,26 +220,27 @@ client.on('message', (topic, payload) => {
         let displayValue = formatNumber(numericValue, config.decimals);
         let extraText = "";
 
-        // Text-Logik für Netzleistung
+        // Text-Logik für Netzleistung (mit Zeilenumbruch <br>)
         if (topic === 'home/haus/zentral/pv/Momentanleistung') {
             if (numericValue < 0) {
-                extraText = " (einspeisen)";
-                displayValue = formatNumber(Math.abs(numericValue), config.decimals); // Minuszeichen für Anzeige entfernen
+                extraText = "<br><small class='secondary'>einspeisen</small>";
+                displayValue = formatNumber(Math.abs(numericValue), config.decimals);
             } else if (numericValue > 0) {
-                extraText = " (beziehen)";
+                extraText = "<br><small class='secondary'>beziehen</small>";
             }
         } 
-        // Text-Logik für Akku Leistung
+        // Text-Logik für Akku Leistung (mit Zeilenumbruch <br>)
         else if (topic === 'home/haus/zentral/pv/luna/power') {
             if (numericValue < 0) {
-                extraText = " (laden)";
-                displayValue = formatNumber(Math.abs(numericValue), config.decimals); // Minuszeichen für Anzeige entfernen
+                extraText = "<br><small class='secondary'>laden</small>";
+                displayValue = formatNumber(Math.abs(numericValue), config.decimals);
             } else if (numericValue > 0) {
-                extraText = " (entladen)";
+                extraText = "<br><small class='secondary'>entladen</small>";
             }
         }
 
-        element.innerHTML = `${displayValue}<span class="unit">${config.unit}${extraText}</span>`;
+        // Der extraText (inkl. Zeilenumbruch) wird hinter der Einheit angehängt
+        element.innerHTML = `${displayValue}<span class="unit">${config.unit}</span>${extraText}`;
     } else {
         element.innerHTML = `${message}<span class="unit">${config.unit}</span>`;
     }
@@ -250,7 +251,6 @@ client.on('message', (topic, payload) => {
     if (topic === 'home/haus/zentral/pv/Momentanleistung') currentNet = isNaN(numericValue) ? 0 : numericValue;
 
     if (topic === 'home/haus/zentral/pv/leistung' || topic === 'home/haus/zentral/pv/Momentanleistung') {
-        // Hier wird mit dem echten Wert inkl. Minuszeichen gerechnet!
         const total = currentAC + currentNet; 
         const displayTotal = formatNumber(total, 2);
         
