@@ -330,8 +330,26 @@ function initThemeToggle() {
     });
 }
 
-// Start der Anwendung
+// --- 5. Cookie Banner Logik ---
+function initCookieBanner() {
+    const banner = document.getElementById('cookie-banner');
+    const acceptBtn = document.getElementById('accept-cookies');
+    
+    // Prüfen, ob der Nutzer schon mal auf "Verstanden" geklickt hat
+    if (!localStorage.getItem('cookieConsent')) {
+        banner.style.display = 'block'; // Banner anzeigen
+    }
+    
+    // Wenn Button geklickt wird, im lokalen Speicher merken und Banner verstecken
+    acceptBtn.addEventListener('click', () => {
+        localStorage.setItem('cookieConsent', 'true');
+        banner.style.display = 'none';
+    });
+}
+
+// Start der Anwendung (HIER AUCH initCookieBanner() HINZUFÜGEN!)
 window.onload = () => {
     initThemeToggle();
+    initCookieBanner(); // <-- NEU
     initChart();
 };
