@@ -15,7 +15,7 @@ let currentAC = 0;
 let currentNet = 0; 
 let pvChart;
 
-// --- NEU: Wörterbuch für die Wechselrichter-Statuscodes ---
+// Wörterbuch für die Wechselrichter-Statuscodes
 const inverterStatuses = {
     "0": "Standby: initializing",
     "1": "Standby: detecting insulation resistance",
@@ -51,20 +51,29 @@ const inverterStatuses = {
     "40960": "Standby: no irradiation"
 };
 
-// Zuordnung der Topics zu UI-Elementen
+// Zuordnung der Topics zu UI-Elementen (NEU: mit definierbaren Nachkommastellen!)
 const topics = {
     'home/haus/zentral/pv/wrstatus': { id: 'wr-status', type: 'text' },
-    'home/haus/zentral/pv/dcleistung': { id: 'pv-dc', unit: ' kW' }, 
-    'home/haus/zentral/pv/leistung': { id: 'pv-ac', unit: ' kW' },   
-    'home/haus/zentral/pv/Momentanleistung': { id: 'net-power', unit: ' kW' }, 
-    'home/haus/zentral/pv/tagesenergy': { id: 'pv-day-energy', unit: ' kWh' },
-    'home/haus/zentral/pv/pv_anlage_totalweek_energy': { id: 'pv-week', unit: ' kWh' },
-    'home/haus/zentral/pv/pv_anlage_totalmonth_energy': { id: 'pv-month', unit: ' kWh' },
-    'home/haus/zentral/pv/pv_anlage_totalyear_energy': { id: 'pv-year', unit: ' kWh' },
-    'home/haus/zentral/pv/gesamtenergie': { id: 'pv-total-energy', unit: ' kWh' },
-    'home/haus/zentral/pv/luna/soc': { id: 'pv-battery-soc', unit: '%' },
+    'home/haus/zentral/pv/dcleistung': { id: 'pv-dc', unit: ' kW', decimals: 2 }, 
+    'home/haus/zentral/pv/leistung': { id: 'pv-ac', unit: ' kW', decimals: 2 },   
+    'home/haus/zentral/pv/Momentanleistung': { id: 'net-power', unit: ' kW', decimals: 2 }, 
+    'home/haus/zentral/pv/tagesenergy': { id: 'pv-day-energy', unit: ' kWh', decimals: 2 },
+    'home/haus/zentral/pv/pv_anlage_totalweek_energy': { id: 'pv-week', unit: ' kWh', decimals: 2 },
+    'home/haus/zentral/pv/pv_anlage_totalmonth_energy': { id: 'pv-month', unit: ' kWh', decimals: 2 },
+    'home/haus/zentral/pv/pv_anlage_totalyear_energy': { id: 'pv-year', unit: ' kWh', decimals: 2 },
+    'home/haus/zentral/pv/gesamtenergie': { id: 'pv-total-energy', unit: ' kWh', decimals: 2 },
+    // Akku explizit auf 0 Nachkommastellen gesetzt
+    'home/haus/zentral/pv/luna/soc': { id: 'pv-battery-soc', unit: ' %', decimals: 0 },
     'home/haus/zentral/pv/historie': { type: 'history' } 
 };
+
+// Hilfsfunktion für die deutsche Zahlenformatierung
+function formatNumber(num, decimals) {
+    return new Intl.NumberFormat('de-DE', {
+        minimumFractionDigits: decimals,
+        maximumFractionDigits: decimals
+    }).format(num);
+}
 
 // --- 2. Chart Initialisierung ---
 function initChart() {
@@ -85,6 +94,7 @@ function initChart() {
             ]
         },
         options: {
+            locale: 'de-DE', // Erzwingt deutsche Formatierung (Komma) in Chart.js
             responsive: true,
             maintainAspectRatio: false,
             scales: {
@@ -92,7 +102,21 @@ function initChart() {
                 x: { ticks: { maxTicksLimit: 12 } } 
             },
             plugins: {
-                legend: { position: 'top' }
+                legend: { position: 'top' },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            let label = context.dataset.label || '';
+                            if (label) {
+                                label += ': ';
+                            }
+                            if (context.parsed.y !== null) {
+                                label += formatNumber(context.parsed.y, 2);
+                            }
+                            return label;
+                        }
+                    }
+                }
             }
         }
     });
@@ -161,47 +185,52 @@ client.on('message', (topic, payload) => {
     const element = document.getElementById(config.id);
     if (!element) return;
 
-    // --- NEUE LOGIK: Wechselrichter-Status auswerten ---
+    // --- LOGIK: Wechselrichter-Status auswerten ---
     if (config.type === 'text') {
-        // Prüfen, ob eine nackte Zahl kam, dann übersetzen. Sonst den Text nehmen.
         let statusText = inverterStatuses[message] ? inverterStatuses[message] : message;
         element.textContent = statusText;
 
         const textLower = statusText.toLowerCase();
         
-        // Farbe zuweisen basierend auf Status
         if (textLower.includes('on-grid') || textLower.includes('running') || textLower.includes('ok')) {
             element.className = 'status-badge status-online';
-            element.style.backgroundColor = '#4caf50'; // sattes Grün
+            element.style.backgroundColor = '#4caf50'; 
             element.style.color = 'white';
         } else if (textLower.includes('shutdown') || textLower.includes('fault') || textLower.includes('disconnected')) {
             element.className = 'status-badge status-offline';
-            element.style.backgroundColor = '#f44336'; // leuchtendes Rot
+            element.style.backgroundColor = '#f44336'; 
             element.style.color = 'white';
         } else {
-            // Für Standby, Starting, Detecting etc. (neutrale Farbe)
             element.className = 'status-badge';
-            element.style.backgroundColor = '#607d8b'; // elegantes Blaugrau
+            element.style.backgroundColor = '#607d8b'; 
             element.style.color = 'white';
         }
-        return; // Text-Verarbeitung hier beenden
+        return; 
     }
 
-    // --- Werteverarbeitung für Zahlen ---
-    const value = isNaN(parseFloat(message)) ? message : parseFloat(message).toFixed(2);
-    element.innerHTML = `${value}<span class="unit">${config.unit}</span>`;
+    // --- Werteverarbeitung für Zahlen (mit Localisation) ---
+    const numericValue = parseFloat(message);
+    if (!isNaN(numericValue)) {
+        // Formatiert die Zahl auf Deutsch und mit der gewünschten Anzahl an Kommastellen
+        const displayValue = formatNumber(numericValue, config.decimals);
+        element.innerHTML = `${displayValue}<span class="unit">${config.unit}</span>`;
+    } else {
+        // Fallback, falls mal versehentlich ein Text gesendet wird
+        element.innerHTML = `${message}<span class="unit">${config.unit}</span>`;
+    }
 
     // --- Live-Berechnung für die Gesamtleistung Kachel ---
-    if (topic === 'home/haus/zentral/pv/dcleistung') currentDC = isNaN(Number(value)) ? 0 : Number(value);
-    if (topic === 'home/haus/zentral/pv/leistung') currentAC = isNaN(Number(value)) ? 0 : Number(value);
-    if (topic === 'home/haus/zentral/pv/Momentanleistung') currentNet = isNaN(Number(value)) ? 0 : Number(value);
+    if (topic === 'home/haus/zentral/pv/dcleistung') currentDC = isNaN(numericValue) ? 0 : numericValue;
+    if (topic === 'home/haus/zentral/pv/leistung') currentAC = isNaN(numericValue) ? 0 : numericValue;
+    if (topic === 'home/haus/zentral/pv/Momentanleistung') currentNet = isNaN(numericValue) ? 0 : numericValue;
 
-    // Aktualisiert die Kachel, sobald AC oder Netz sich ändern
     if (topic === 'home/haus/zentral/pv/leistung' || topic === 'home/haus/zentral/pv/Momentanleistung') {
-        const total = (currentAC + currentNet).toFixed(2);
+        const total = currentAC + currentNet;
+        const displayTotal = formatNumber(total, 2);
+        
         const totalElement = document.getElementById('pv-total');
         if (totalElement) {
-            totalElement.innerHTML = `${total}<span class="unit"> kW</span>`;
+            totalElement.innerHTML = `${displayTotal}<span class="unit"> kW</span>`;
         }
     }
 });
