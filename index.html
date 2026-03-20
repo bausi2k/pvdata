@@ -39,7 +39,7 @@
 
         <div class="grid-4">
             <article>
-                <header><strong>Wechselrichtrleistung</strong></header>
+                <header><strong>Wechselrichterleistung</strong></header>
                 <span id="pv-ac" class="data-value">--<span class="unit">kW</span></span>
             </article>
             <article>
@@ -55,28 +55,8 @@
                 <span id="pv-day-energy" class="data-value">--<span class="unit">kWh</span></span>
             </article>
         </div>
-
-        <hr style="margin: 2rem 0; opacity: 0.5;">
-
-        <div class="grid-4">
-            <article>
-                <header><strong>Modulleistung</strong></header>
-                <span id="pv-dc" class="data-value">--<span class="unit">kW</span></span>
-            </article>
-            <article>
-                <header><strong>Akku Ladestand</strong></header>
-                <div style="display: flex; align-items: center; justify-content: center; gap: 0.75rem;">
-                    <i id="battery-icon" class="fas fa-battery-three-quarters data-value" style="color: #4caf50;"></i>
-                    <span id="pv-battery-soc" class="data-value">--<span class="unit">%</span></span>
-                </div>
-            </article>
-            <article>
-                <header><strong>Akku Leistung</strong></header>
-                <span id="pv-battery-power" class="data-value">--<span class="unit">kW</span></span>
-            </article>
-        </div>
-
-        <hr style="margin: 2rem 0; opacity: 0.5;">
+        
+        <hr style="margin: 1rem 0; opacity: 0.7;">
 
         <article>
             <header><strong>Leistungsverlauf</strong></header>
@@ -84,47 +64,70 @@
                 <canvas id="pvChart"></canvas>
             </div>
         </article>
-		
-		 <hr style="margin: 2rem 0; opacity: 0.5;">
-		 
-		<details>
+
+        <hr style="margin: 1rem 0; opacity: 0.7;">
+        
+        <details>
+            <summary role="button" class="outline secondary">Akku Informationen</summary>
+            <div class="grid-4">
+                <article>
+                    <header><strong>Modulleistung</strong></header>
+                    <span id="pv-dc" class="data-value">--<span class="unit">kW</span></span>
+                </article>
+                <article>
+                    <header><strong>Akku Ladestand</strong></header>
+                    <div style="display: flex; align-items: center; justify-content: center; gap: 0.75rem;">
+                        <i id="battery-icon" class="fas fa-battery-three-quarters data-value" style="color: #4caf50;"></i>
+                        <span id="pv-battery-soc" class="data-value">--<span class="unit">%</span></span>
+                    </div>
+                </article>
+                <article>
+                    <header><strong>Akku Leistung</strong></header>
+                    <span id="pv-battery-power" class="data-value">--<span class="unit">kW</span></span>
+                </article>
+            </div>
+        </details>
+
+        <details>
             <summary role="button" class="outline secondary">Langzeitstatistik</summary>
-        <div class="grid-4" style="margin-top: 2rem;">
-            <article>
-                <header><strong>Wochenenergie</strong></header>
-                <span id="pv-week" class="data-value">--<span class="unit">kWh</span></span>
-            </article>
-            <article>
-                <header><strong>Monatsenergie</strong></header>
-                <span id="pv-month" class="data-value">--<span class="unit">kWh</span></span>
-            </article>
-            <article>
-                <header><strong>Jahresenergie</strong></header>
-                <span id="pv-year" class="data-value">--<span class="unit">kWh</span></span>
-            </article>
-            <article>
-                <header><strong>Gesamtenergie</strong></header>
-                <span id="pv-total-energy" class="data-value">--<span class="unit">kWh</span></span>
-            </article>
-        </div>
-		</details>
-		<details>
-		    <summary role="button" class="outline secondary">Erweiterte Energie-Statistiken (Tagesvergleich)</summary>
-		    <div class="grid">
-		        <article id="stats-week-card">
-		            <header><strong>Heute vs. Woche</strong></header>
-		            <div id="stats-week">Berechne...</div>
-		        </article>
-		        <article id="stats-month-card">
-		            <header><strong>Heute vs. Monat</strong></header>
-		            <div id="stats-month">Berechne...</div>
-		        </article>
-		        <article id="stats-year-card">
-		            <header><strong>Heute vs. Jahr</strong></header>
-		            <div id="stats-year">Berechne...</div>
-		        </article>
-		    </div>
-		</details>
+            <div class="grid-4">
+                <article>
+                    <header><strong>Wochenenergie</strong></header>
+                    <span id="pv-week" class="data-value">--<span class="unit">kWh</span></span>
+                </article>
+                <article>
+                    <header><strong>Monatsenergie</strong></header>
+                    <span id="pv-month" class="data-value">--<span class="unit">kWh</span></span>
+                </article>
+                <article>
+                    <header><strong>Jahresenergie</strong></header>
+                    <span id="pv-year" class="data-value">--<span class="unit">kWh</span></span>
+                </article>
+                <article>
+                    <header><strong>Gesamtenergie</strong></header>
+                    <span id="pv-total-energy" class="data-value">--<span class="unit">kWh</span></span>
+                </article>
+            </div>
+        </details>
+        
+        <details>
+            <summary role="button" class="outline secondary">Erweiterte Energie-Statistiken (Tagesvergleich)</summary>
+            <div class="grid">
+                <article id="stats-week-card">
+                    <header><strong>Heute vs. Woche</strong></header>
+                    <div id="stats-week">Berechne...</div>
+                </article>
+                <article id="stats-month-card">
+                    <header><strong>Heute vs. Monat</strong></header>
+                    <div id="stats-month">Berechne...</div>
+                </article>
+                <article id="stats-year-card">
+                    <header><strong>Heute vs. Jahr</strong></header>
+                    <div id="stats-year">Berechne...</div>
+                </article>
+            </div>
+        </details>
+        
         <footer>
             <small>
                 made with ❤️ and Google Gemini @ Gruber 🏡 
