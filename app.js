@@ -1,6 +1,6 @@
 /**
- * app.js - PV Dashboard Sonnenblumenweg v1.2.5
- * Fokus: Dynamische Nullpunkt-Progressbars, Eigenverbrauch, Chart-Nulllinie & Wetter-Icon
+ * app.js - PV Dashboard Sonnenblumenweg v1.3.1
+ * Fokus: Bidirektionale Balken (Zero-Centered) für die Durchschnittswerte
  */
 
 // --- 1. Konfiguration ---
@@ -154,7 +154,7 @@ client.on('message', (topic, payload) => {
         return;
     }
 
-    // ----- SPEZIALFALL: Node-RED Statistiken mit dynamischen Progress Bars -----
+    // ----- SPEZIALFALL: Node-RED Statistiken mit bidirektionalen Balken -----
     if (config.type === 'json-stats') {
         try {
             const stats = JSON.parse(message);
@@ -172,9 +172,14 @@ client.on('message', (topic, payload) => {
                 let limit = Math.ceil(Math.abs(diff) / 5) * 5;
                 if (limit === 0) limit = 5;
 
-                // Da Progress Bars bei 0 anfangen, verschieben wir den Wert um das Limit
-                const progressMax = limit * 2;
-                const progressVal = limit + diff;
+                // --- NEUE LOGIK FÜR DEN BALKEN ---
+                // Wie viel Prozent der halben Breite (50%) nimmt der Wert ein?
+                const widthPercent = (Math.abs(diff) / limit) * 50; 
+                
+                // Je nach Vorzeichen verankern wir den Balken links (right: 50%) oder rechts (left: 50%) der Mitte
+                const barStyle = diff >= 0 
+                    ? `left: 50%; width: ${widthPercent}%; border-top-left-radius: 0; border-bottom-left-radius: 0;` 
+                    : `right: 50%; width: ${widthPercent}%; border-top-right-radius: 0; border-bottom-right-radius: 0;`;
 
                 el.innerHTML = `
                     <div style="margin-bottom: 0.5rem; display: flex; justify-content: space-between; align-items: flex-end;">
@@ -182,7 +187,10 @@ client.on('message', (topic, payload) => {
                         <strong>${formatNumber(data.schnitt, 2)} kWh</strong>
                     </div>
                     
-                    <progress value="${progressVal}" max="${progressMax}" style="--pico-progress-color: ${color}; margin-bottom: 0.2rem; height: 12px;"></progress>
+                    <div style="width: 100%; height: 12px; background-color: rgba(128, 128, 128, 0.15); border-radius: 6px; position: relative; margin-bottom: 0.2rem; overflow: hidden;">
+                        <div style="position: absolute; top: 0; height: 100%; background-color: ${color}; border-radius: 6px; transition: all 0.5s ease-out; ${barStyle}"></div>
+                        <div style="position: absolute; top: 0; left: 50%; width: 2px; height: 100%; background-color: var(--pico-color); opacity: 0.4; transform: translateX(-50%);"></div>
+                    </div>
                     
                     <div style="display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--pico-muted-color); margin-bottom: 1rem;">
                         <span>-${limit}</span>
@@ -344,5 +352,5 @@ window.onload = () => {
     initThemeToggle();
     initCookieBanner();
     initChart();
-    initWeatherIcon(); // <--- DIESE ZEILE HINZUFÜGEN
+    initWeatherIcon();
 };
