@@ -1,6 +1,6 @@
 /**
- * app.js - PV Dashboard Sonnenblumenweg v1.2.3
- * Fokus: Dynamische Nullpunkt-Progressbars & reparierte Batterie-Icons
+ * app.js - PV Dashboard Sonnenblumenweg v1.2.5
+ * Fokus: Dynamische Nullpunkt-Progressbars, Eigenverbrauch, Chart-Nulllinie & Wetter-Icon
  */
 
 // --- 1. Konfiguration ---
@@ -24,6 +24,7 @@ const inverterStatuses = {
 };
 
 const topics = {
+    'home/haus/dach/sonnenschein': { id: 'weather-icon', type: 'weather' },
     'home/haus/zentral/pv/wrstatus': { id: 'wr-status', type: 'text' },
     'home/haus/zentral/pv/dcleistung': { id: 'pv-dc', unit: ' kW', decimals: 2 }, 
     'home/haus/zentral/pv/leistung': { id: 'pv-ac', unit: ' kW', decimals: 2 },   
@@ -73,8 +74,17 @@ function initChart() {
             maintainAspectRatio: false, 
             color: textColor, 
             scales: { 
-                y: { ticks: { color: textColor } }, 
-                x: { ticks: { color: textColor } } 
+                y: { 
+                    ticks: { color: textColor },
+                    grid: {
+                        lineWidth: (context) => context.tick.value === 0 ? 2 : 1,
+                        color: (context) => context.tick.value === 0 ? textColor : 'rgba(128, 128, 128, 0.15)'
+                    }
+                }, 
+                x: { 
+                    ticks: { color: textColor },
+                    grid: { color: 'rgba(128, 128, 128, 0.15)' }
+                } 
             } 
         }
     });
@@ -96,6 +106,7 @@ client.on('message', (topic, payload) => {
     const config = topics[topic];
     if (!config) return;
 
+    // ----- SPEZIALFALL: Historie -----
     if (config.type === 'history') {
         try {
             const data = JSON.parse(message);
@@ -109,6 +120,37 @@ client.on('message', (topic, payload) => {
                 pvChart.update();
             }
         } catch (e) { console.error("History Error:", e); }
+        return;
+    }
+
+    // ----- SPEZIALFALL: Wetter-Icon -----
+    if (config.type === 'weather') {
+        const el = document.getElementById(config.id);
+        if (!el) return;
+        
+        // Werte bereinigen (falls Loxone 'ein', '1', 'ON' oder 'true' sendet)
+        const msgStr = message.toLowerCase();
+        const isSun = msgStr === 'ein' || msgStr === '1' || msgStr === 'on' || msgStr === 'true';
+        
+        // Tag/Nacht Erkennung (Simpel: 20 Uhr bis 6 Uhr ist Nacht)
+        const hour = new Date().getHours();
+        const isNight = hour >= 20 || hour < 6;
+
+        let icon = '🌥️'; // Standard: Aus und Tag (Wolken)
+        if (isSun) {
+            icon = '☀️'; // Sonne scheint
+        } else if (isNight) {
+            icon = '🌝'; // Aus und Nacht (Mond)
+        }
+
+        if (el.innerText !== icon) {
+            el.innerText = icon;
+            // Kleiner Bounce-Effekt beim Wechsel
+            el.style.display = 'inline-block';
+            el.style.transition = 'transform 0.2s';
+            el.style.transform = 'scale(1.3)';
+            setTimeout(() => el.style.transform = 'scale(1)', 200);
+        }
         return;
     }
 
@@ -213,19 +255,20 @@ client.on('message', (topic, payload) => {
         }
     }
 
-	if (topic === 'home/haus/zentral/pv/dcleistung') currentDC = parseFloat(message) || 0;
-	    if (topic === 'home/haus/zentral/pv/leistung') currentAC = parseFloat(message) || 0;
-	    if (topic === 'home/haus/zentral/pv/Momentanleistung') currentNet = parseFloat(message) || 0;
+    // Hausleistung berechnen (hart auf Topics geprüft)
+    if (topic === 'home/haus/zentral/pv/dcleistung') currentDC = parseFloat(message) || 0;
+    if (topic === 'home/haus/zentral/pv/leistung') currentAC = parseFloat(message) || 0;
+    if (topic === 'home/haus/zentral/pv/Momentanleistung') currentNet = parseFloat(message) || 0;
 
-	    const total = currentAC + currentNet;
-	    const totalEl = document.getElementById('pv-total');
-	    if (totalEl) {
-	        const newTotalHTML = `${formatNumber(total, 2)}<span class="unit"> kW</span>`;
-	        if (totalEl.innerHTML !== newTotalHTML) {
-	            totalEl.innerHTML = newTotalHTML;
-	            triggerFlash(totalEl);
-	        }
-	    }
+    const total = currentAC + currentNet;
+    const totalEl = document.getElementById('pv-total');
+    if (totalEl) {
+        const newTotalHTML = `${formatNumber(total, 2)}<span class="unit"> kW</span>`;
+        if (totalEl.innerHTML !== newTotalHTML) {
+            totalEl.innerHTML = newTotalHTML;
+            triggerFlash(totalEl);
+        }
+    }
 });
 
 // --- 4. UI Funktionen ---
@@ -284,8 +327,22 @@ function initCookieBanner() {
     });
 }
 
+function initWeatherIcon() {
+    const el = document.getElementById('weather-icon');
+    if (!el) return;
+    
+    // Simpel: 20 Uhr bis 6 Uhr ist Nacht
+    const hour = new Date().getHours();
+    const isNight = hour >= 20 || hour < 6;
+    
+    // Setze ein Standard-Icon, bis das erste MQTT-Signal kommt
+    el.innerText = isNight ? '🌝' : '🌥️'; 
+    el.style.display = 'inline-block';
+}
+
 window.onload = () => {
     initThemeToggle();
     initCookieBanner();
     initChart();
+    initWeatherIcon(); // <--- DIESE ZEILE HINZUFÜGEN
 };
