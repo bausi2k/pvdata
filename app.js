@@ -1,5 +1,5 @@
 /**
- * app.js - PV Dashboard Sonnenblumenweg v1.3.1
+ * app.js - PV Dashboard Sonnenblumenweg v1.3.2
  * Fokus: Bidirektionale Balken (Zero-Centered) für die Durchschnittswerte
  */
 
@@ -154,7 +154,7 @@ client.on('message', (topic, payload) => {
         return;
     }
 
-    // ----- SPEZIALFALL: Node-RED Statistiken mit bidirektionalen Balken -----
+// ----- SPEZIALFALL: Node-RED Statistiken mit bidirektionalen Balken -----
     if (config.type === 'json-stats') {
         try {
             const stats = JSON.parse(message);
@@ -172,7 +172,7 @@ client.on('message', (topic, payload) => {
                 let limit = Math.ceil(Math.abs(diff) / 5) * 5;
                 if (limit === 0) limit = 5;
 
-                // --- NEUE LOGIK FÜR DEN BALKEN ---
+                // --- LOGIK FÜR DEN BALKEN ---
                 // Wie viel Prozent der halben Breite (50%) nimmt der Wert ein?
                 const widthPercent = (Math.abs(diff) / limit) * 50; 
                 
@@ -193,9 +193,9 @@ client.on('message', (topic, payload) => {
                     </div>
                     
                     <div style="display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--pico-muted-color); margin-bottom: 1rem;">
-                        <span>-${limit}</span>
-                        <span>0</span>
-                        <span>+${limit}</span>
+                        <span>-${limit} kWh</span>
+                        <span>0 kWh</span>
+                        <span>+${limit} kWh</span>
                     </div>
                     
                     <div style="text-align: center;">
