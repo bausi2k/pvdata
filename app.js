@@ -33,6 +33,7 @@ const topics = {
     'home/haus/zentral/pv/pv_anlage_totalmonth_energy': { id: 'pv-month', unit: ' kWh', decimals: 2 },
     'home/haus/zentral/pv/pv_anlage_totalyear_energy': { id: 'pv-year', unit: ' kWh', decimals: 2 },
     'home/haus/zentral/pv/gesamtenergie': { id: 'pv-total-energy', unit: ' kWh', decimals: 2 },
+    'home/haus/zentral/eigenverbrauch': { id: 'eigenverbrauch', unit: ' %', decimals: 1 },
     'home/haus/zentral/pv/luna/soc': { id: 'pv-battery-soc', unit: ' %', decimals: 0 },
     'home/haus/zentral/pv/luna/power': { id: 'pv-battery-power', unit: ' kW', decimals: 3 },
     'home/haus/zentral/pv/stats/comparison': { type: 'json-stats' },

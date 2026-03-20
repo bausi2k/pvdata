@@ -39,8 +39,8 @@
 
         <div class="grid-4">
             <article>
-                <header><strong>Wechselrichterleistung</strong></header>
-                <span id="pv-ac" class="data-value">--<span class="unit">kW</span></span>
+                <header><strong>Modulleistung</strong></header>
+                <span id="pv-dc" class="data-value">--<span class="unit">kW</span></span>
             </article>
             <article>
                 <header><strong>Netzleistung</strong></header>
@@ -55,25 +55,18 @@
                 <span id="pv-day-energy" class="data-value">--<span class="unit">kWh</span></span>
             </article>
         </div>
-        
-        <hr style="margin: 1rem 0; opacity: 0.7;">
-
-        <article>
-            <header><strong>Leistungsverlauf</strong></header>
-            <div id="chart-wrapper">
-                <canvas id="pvChart"></canvas>
-            </div>
-        </article>
 
         <hr style="margin: 1rem 0; opacity: 0.7;">
         
-        <details>
-            <summary role="button" class="outline secondary">Akku Informationen</summary>
             <div class="grid-4">
-                <article>
-                    <header><strong>Modulleistung</strong></header>
-                    <span id="pv-dc" class="data-value">--<span class="unit">kW</span></span>
-                </article>
+               <article>
+                   <header><strong>Eigenverbrauchsquote</strong></header>
+                   <span id="eigenverbrauch" class="data-value">--<span class="unit">%</span></span>
+               </article>
+			   <article>
+                   <header><strong>Wechselrichterleistung</strong></header>
+                   <span id="pv-ac" class="data-value">--<span class="unit">kW</span></span>
+               </article>
                 <article>
                     <header><strong>Akku Ladestand</strong></header>
                     <div style="display: flex; align-items: center; justify-content: center; gap: 0.75rem;">
@@ -86,7 +79,17 @@
                     <span id="pv-battery-power" class="data-value">--<span class="unit">kW</span></span>
                 </article>
             </div>
-        </details>
+        
+        <hr style="margin: 1rem 0; opacity: 0.7;">
+
+        <article>
+            <header><strong>Leistungsverlauf</strong></header>
+            <div id="chart-wrapper">
+                <canvas id="pvChart"></canvas>
+            </div>
+        </article>
+
+
 
         <details>
             <summary role="button" class="outline secondary">Langzeitstatistik</summary>
